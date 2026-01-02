@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>药物组合分析系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        /* 语言切换器 */
+        .language-switcher {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        
+        .lang-btn {
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        
+        .lang-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .lang-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: white;
+            font-weight: bold;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .drug-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .drug-input-group {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .drug-input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .drug-search {
+            position: relative;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 40px 12px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+        
+        .drug-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #667eea;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .drug-dropdown.show {
+            display: block;
+        }
+        
+        .drug-option {
+            padding: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .drug-option:hover {
+            background: #f0f4ff;
+        }
+        
+        .drug-option:last-child {
+            border-bottom: none;
+        }
+        
+        .selected-drugs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .drug-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .drug-tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            line-height: 1;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        
+        .drug-tag .remove:hover {
+            opacity: 1;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .result-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .result-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .risk-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        .risk-high {
+            background: #fee;
+            color: #c33;
+        }
+        
+        .risk-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .risk-low {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .risk-protective {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .combination-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .combination-item h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-item .label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-item .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .recommendations {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .recommendations h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .recommendations ul {
+            margin-left: 20px;
+            color: #856404;
+        }
+        
+        .recommendations li {
+            margin-bottom: 8px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .outcome-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .outcome-tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .outcome-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+        
+        .outcome-content {
+            display: none;
+        }
+        
+        .outcome-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header" style="position: relative;">
+            <div class="language-switcher">
+                <button class="lang-btn active" onclick="switchLanguage('zh')" data-lang="zh">中文</button>
+                <button class="lang-btn" onclick="switchLanguage('en')" data-lang="en">English</button>
+                <button class="lang-btn" onclick="switchLanguage('fr')" data-lang="fr">Français</button>
+            </div>
+            <h1 id="title">💊 药物组合分析系统</h1>
+            <p id="subtitle">分析任意药物组合的风险和疗效</p>
+        </div>
+        
+        <div class="content">
+            <!-- 药物选择区域 -->
+            <div class="section">
+                <h2 id="section1Title">1. 选择药物</h2>
+                <div class="drug-selector">
+                    <div class="drug-input-group">
+                        <label id="drugSearchLabel">搜索并添加药物（支持中文和英文）</label>
+                        <div class="drug-search">
+                            <input type="text" id="drugSearch" data-placeholder-key="drugSearchPlaceholder">
+                            <span class="search-icon">🔍</span>
+                            <div class="drug-dropdown" id="drugDropdown"></div>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 12px; color: #666;" id="drugSearchHint">
+                            💡 提示：支持中文搜索（如：青霉素、阿司匹林、醋酸泼尼松），也可以输入英文名称
+                        </div>
+                    </div>
+                </div>
+                <div class="selected-drugs" id="selectedDrugs"></div>
+                <button class="btn" id="analyzeBtn" onclick="analyzeCombination()" data-text-key="btnAnalyze">开始分析</button>
+            </div>
+            
+            <!-- 加载状态 -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p id="loadingText">正在分析药物组合，请稍候...</p>
+            </div>
+            
+            <!-- 结果区域 -->
+            <div class="results" id="results">
+                <div class="section">
+                    <h2 id="resultsTitle">分析结果</h2>
+                    
+                    <!-- 总体风险 -->
+                    <div class="result-card">
+                        <h3 id="overallRiskTitle">总体风险评估</h3>
+                        <div id="overallRisk"></div>
+                    </div>
+                    
+                    <!-- 多器官功能障碍预测 -->
+                    <div class="result-card">
+                        <h3 id="organPredictionTitle">多器官功能障碍预测</h3>
+                        <div class="outcome-tabs" id="outcomeTabs"></div>
+                        <div id="outcomeContent"></div>
+                    </div>
+                    
+                    <!-- 建议 -->
+                    <div class="recommendations" id="recommendations"></div>
+                </div>
+            </div>
+            
+            <!-- 错误信息 -->
+            <div class="error" id="error" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:5003';
+        let allDrugs = [];
+        let selectedDrugs = [];
+        let currentOrgan = 'kidney'; // 当前选择的器官类型
+        let currentLanguage = localStorage.getItem('language') || 'zh'; // 当前语言
+        
+        // 国际化文本资源
+        const i18n = {
+            zh: {
+                title: '💊 药物组合分析系统',
+                subtitle: '分析任意药物组合的风险和疗效',
+                section1Title: '1. 选择药物',
+                drugSearchLabel: '搜索并添加药物（支持中文和英文）',
+                drugSearchPlaceholder: '输入药物名称搜索（如：青霉素、aspirin、prednisone）...',
+                drugSearchHint: '💡 提示：支持中文搜索（如：青霉素、阿司匹林、醋酸泼尼松），也可以输入英文名称',
+                btnAnalyze: '开始分析',
+                loadingText: '正在分析药物组合，请稍候...',
+                resultsTitle: '分析结果',
+                overallRiskTitle: '总体风险评估',
+                organPredictionTitle: '多器官功能障碍预测',
+                kidneyAbnormal: '肾功能异常',
+                liverAbnormal: '肝功能异常',
+                organAbnormal: '多器官功能障碍',
+                noDrugsSelected: '暂无已选药物',
+                selectAtLeast2: '请至少选择2种药物',
+                currentSelected: '当前已选择',
+                drugs: '种药物',
+                selectedDrugs: '已选药物',
+                analyzing: '分析中...',
+                errorApiConnection: '无法连接到API服务，请确保API服务正在运行',
+                errorNoDrugs: '未找到匹配的药物',
+                errorTryEnglish: '请尝试输入英文名称',
+                predictionResult: '预测结果',
+                predictionStatus: '预测状态',
+                abnormalProbability: '异常概率',
+                riskLevel: '风险等级',
+                highRisk: '高风险',
+                mediumRisk: '中等风险',
+                lowRisk: '低风险',
+                normal: '正常',
+                abnormal: '异常',
+                recommendations: '临床建议',
+                addDrug: '添加此药物',
+                basedOn: '基于',
+                predict: '预测',
+                risk: '风险',
+                noResults: '未发现明显的保护性联用效果',
+                overallRiskLevel: '总体风险等级',
+                averageRelativeRisk: '平均相对风险',
+                maxRelativeRisk: '最大相对风险',
+                analyzedCombinations: '分析组合数',
+                predictionResult: '预测结果',
+                suggestMonitor: '预测可能出现器官功能异常，建议密切监测相关指标（BUN、INR、白蛋白等）',
+                predictionNormal: '当前预测为正常，继续监测',
+                solution: '解决方案',
+                checkApiRunning: '检查API服务是否正在运行',
+                checkApiHealth: '访问健康检查端点查看服务状态',
+                restartApi: '如果模型未加载，重启API服务',
+                checkApiLogs: '查看API启动日志，确认模型加载成功',
+                modelNotLoaded: '预测模型未加载',
+                drugAlreadySelected: '该药物已在选择列表中',
+                foundChineseButNoEnglish: '找到中文名称，但未在药物列表中找到对应的英文药物',
+                suggestTryEnglish: '建议：尝试输入英文名称',
+                noMatchingDrugs: '未找到匹配的药物',
+                chineseNotInMap: '该中文名称可能不在映射表中',
+                tryCommonDrugs: '或尝试常见药物',
+                checkSpelling: '请检查拼写是否正确',
+                tryPartialName: '或尝试输入部分名称',
+                preventOrganDysfunction: '防止多器官功能障碍的推荐药物',
+                basedOnAnalysis: '基于数据分析和临床知识，以下药物可能有助于降低器官功能异常风险',
+                detectedRisk: '检测到器官功能异常风险，建议考虑添加保护性药物',
+                recommendedReason: '推荐理由',
+                riskReduction: '估计风险降低',
+                addThisDrug: '添加此药物',
+                noteRecommendations: '⚠️ 注意：推荐药物仅供参考，实际用药需结合临床判断和患者具体情况',
+                clinicalRecommendations: '临床建议',
+                noData: '暂无相关数据',
+                riskyCombinations: '高风险药物组合',
+                effectiveCombinations: '有效药物组合',
+                relativeRisk: '相对风险',
+                comboWith: '与',
+                comboWithSuffix: '联用',
+                potentialRiskReduction: '潜在风险降低',
+                drugRecommendation: '药物推荐',
+                noRecommendationData: '检测到器官功能异常风险，但暂无推荐药物数据',
+                suggestionAntioxidant: '建议：考虑使用抗氧化剂（如N-乙酰半胱氨酸）、维生素类、或根据临床指南使用器官保护性药物'
+            },
+            en: {
+                title: '💊 Drug Combination Analysis System',
+                subtitle: 'Analyze risks and efficacy of any drug combination',
+                section1Title: '1. Select Drugs',
+                drugSearchLabel: 'Search and add drugs (supports Chinese and English)',
+                drugSearchPlaceholder: 'Enter drug name to search (e.g., penicillin, aspirin, prednisone)...',
+                drugSearchHint: '💡 Tip: Supports Chinese or English search (e.g., penicillin, aspirin, prednisone)',
+                btnAnalyze: 'Start Analysis',
+                loadingText: 'Analyzing drug combination, please wait...',
+                resultsTitle: 'Analysis Results',
+                overallRiskTitle: 'Overall Risk Assessment',
+                organPredictionTitle: 'Multi-Organ Dysfunction Prediction',
+                kidneyAbnormal: 'Kidney Dysfunction',
+                liverAbnormal: 'Liver Dysfunction',
+                organAbnormal: 'Multi-Organ Dysfunction',
+                noDrugsSelected: 'No drugs selected',
+                selectAtLeast2: 'Please select at least 2 drugs',
+                currentSelected: 'Currently selected',
+                drugs: 'drugs',
+                selectedDrugs: 'Selected drugs',
+                analyzing: 'Analyzing...',
+                errorApiConnection: 'Cannot connect to API service, please ensure the API service is running',
+                errorNoDrugs: 'No matching drugs found',
+                errorTryEnglish: 'Please try entering English names',
+                predictionResult: 'Prediction Result',
+                predictionStatus: 'Prediction Status',
+                abnormalProbability: 'Abnormal Probability',
+                riskLevel: 'Risk Level',
+                highRisk: 'High Risk',
+                mediumRisk: 'Medium Risk',
+                lowRisk: 'Low Risk',
+                normal: 'Normal',
+                abnormal: 'Abnormal',
+                recommendations: 'Clinical Recommendations',
+                addDrug: 'Add This Drug',
+                basedOn: 'Based on',
+                predict: 'predict',
+                risk: 'risk',
+                noResults: 'No significant protective combination effects found',
+                overallRiskLevel: 'Overall Risk Level',
+                averageRelativeRisk: 'Average Relative Risk',
+                maxRelativeRisk: 'Max Relative Risk',
+                analyzedCombinations: 'Analyzed Combinations',
+                predictionResult: 'Prediction Result',
+                suggestMonitor: 'Organ dysfunction may occur, closely monitor relevant indicators (BUN, INR, albumin, etc.)',
+                predictionNormal: 'Current prediction is normal, continue monitoring',
+                solution: 'Solution',
+                checkApiRunning: 'Check if API service is running',
+                checkApiHealth: 'Visit health check endpoint to view service status',
+                restartApi: 'If model is not loaded, restart API service',
+                checkApiLogs: 'Check API startup logs to confirm model loading',
+                modelNotLoaded: 'Prediction model not loaded',
+                drugAlreadySelected: 'This drug is already in the selection list',
+                foundChineseButNoEnglish: 'Found Chinese name but no corresponding English drug in the list',
+                suggestTryEnglish: 'Suggestion: Try entering English names',
+                noMatchingDrugs: 'No matching drugs found',
+                chineseNotInMap: 'This Chinese name may not be in the mapping table',
+                tryCommonDrugs: 'Or try common drugs',
+                checkSpelling: 'Please check if spelling is correct',
+                tryPartialName: 'Or try entering partial name',
+                preventOrganDysfunction: 'Recommended Drugs to Prevent Multi-Organ Dysfunction',
+                basedOnAnalysis: 'Based on data analysis and clinical knowledge, the following drugs may help reduce organ dysfunction risk',
+                detectedRisk: 'Organ dysfunction risk detected, consider adding protective drugs',
+                recommendedReason: 'Recommended Reason',
+                riskReduction: 'Estimated Risk Reduction',
+                addThisDrug: 'Add This Drug',
+                noteRecommendations: 'Note: Recommended drugs are for reference only, actual use should be combined with clinical judgment and patient-specific situation',
+                clinicalRecommendations: 'Clinical Recommendations',
+                noData: 'No relevant data',
+                riskyCombinations: 'High-Risk Drug Combinations',
+                effectiveCombinations: 'Effective Drug Combinations',
+                relativeRisk: 'Relative Risk',
+                comboWith: 'with',
+                comboWithSuffix: 'combination',
+                potentialRiskReduction: 'Potential Risk Reduction',
+                drugRecommendation: 'Drug Recommendation',
+                noRecommendationData: 'Organ dysfunction risk detected, but no recommendation data available',
+                suggestionAntioxidant: 'Suggestion: Consider using antioxidants (e.g., N-acetylcysteine), vitamins, or organ-protective drugs according to clinical guidelines'
+            },
+            fr: {
+                title: '💊 Système d\'Analyse de Combinaisons Médicamenteuses',
+                subtitle: 'Analyser les risques et l\'efficacité de toute combinaison de médicaments',
+                section1Title: '1. Sélectionner les Médicaments',
+                drugSearchLabel: 'Rechercher et ajouter des médicaments (supporte le chinois et l\'anglais)',
+                drugSearchPlaceholder: 'Entrez le nom du médicament à rechercher (ex: pénicilline, aspirine, prednisone)...',
+                drugSearchHint: '💡 Astuce: Supporte la recherche en chinois ou en anglais (ex: pénicilline, aspirine, prednisone)',
+                btnAnalyze: 'Démarrer l\'Analyse',
+                loadingText: 'Analyse de la combinaison de médicaments en cours, veuillez patienter...',
+                resultsTitle: 'Résultats de l\'Analyse',
+                overallRiskTitle: 'Évaluation Globale des Risques',
+                organPredictionTitle: 'Prédiction de Dysfonctionnement Multi-Organes',
+                kidneyAbnormal: 'Dysfonctionnement Rénal',
+                liverAbnormal: 'Dysfonctionnement Hépatique',
+                organAbnormal: 'Dysfonctionnement Multi-Organes',
+                noDrugsSelected: 'Aucun médicament sélectionné',
+                selectAtLeast2: 'Veuillez sélectionner au moins 2 médicaments',
+                currentSelected: 'Actuellement sélectionné',
+                drugs: 'médicaments',
+                selectedDrugs: 'Médicaments sélectionnés',
+                analyzing: 'Analyse en cours...',
+                errorApiConnection: 'Impossible de se connecter au service API, veuillez vous assurer que le service API est en cours d\'exécution',
+                errorNoDrugs: 'Aucun médicament correspondant trouvé',
+                errorTryEnglish: 'Veuillez essayer d\'entrer des noms anglais',
+                predictionResult: 'Résultat de la Prédiction',
+                predictionStatus: 'Statut de la Prédiction',
+                abnormalProbability: 'Probabilité d\'Anomalie',
+                riskLevel: 'Niveau de Risque',
+                highRisk: 'Risque Élevé',
+                mediumRisk: 'Risque Moyen',
+                lowRisk: 'Risque Faible',
+                normal: 'Normal',
+                abnormal: 'Anormal',
+                recommendations: 'Recommandations Cliniques',
+                addDrug: 'Ajouter ce Médicament',
+                basedOn: 'Basé sur',
+                predict: 'prédire',
+                risk: 'risque',
+                noResults: 'Aucun effet protecteur significatif de combinaison trouvé',
+                overallRiskLevel: 'Niveau de Risque Global',
+                averageRelativeRisk: 'Risque Relatif Moyen',
+                maxRelativeRisk: 'Risque Relatif Maximum',
+                analyzedCombinations: 'Combinaisons Analysées',
+                predictionResult: 'Résultat de la Prédiction',
+                suggestMonitor: 'Un dysfonctionnement d\'organe peut survenir, surveiller de près les indicateurs pertinents (BUN, INR, albumine, etc.)',
+                predictionNormal: 'La prédiction actuelle est normale, continuer la surveillance',
+                solution: 'Solution',
+                checkApiRunning: 'Vérifier si le service API est en cours d\'exécution',
+                checkApiHealth: 'Visiter le point de contrôle de santé pour voir l\'état du service',
+                restartApi: 'Si le modèle n\'est pas chargé, redémarrer le service API',
+                checkApiLogs: 'Vérifier les journaux de démarrage de l\'API pour confirmer le chargement du modèle',
+                modelNotLoaded: 'Modèle de prédiction non chargé',
+                drugAlreadySelected: 'Ce médicament est déjà dans la liste de sélection',
+                foundChineseButNoEnglish: 'Nom chinois trouvé mais aucun médicament anglais correspondant dans la liste',
+                suggestTryEnglish: 'Suggestion: Essayez d\'entrer des noms anglais',
+                noMatchingDrugs: 'Aucun médicament correspondant trouvé',
+                chineseNotInMap: 'Ce nom chinois peut ne pas être dans la table de correspondance',
+                tryCommonDrugs: 'Ou essayez des médicaments courants',
+                checkSpelling: 'Veuillez vérifier si l\'orthographe est correcte',
+                tryPartialName: 'Ou essayez d\'entrer un nom partiel',
+                preventOrganDysfunction: 'Médicaments Recommandés pour Prévenir le Dysfonctionnement Multi-Organes',
+                basedOnAnalysis: 'Basé sur l\'analyse des données et les connaissances cliniques, les médicaments suivants peuvent aider à réduire le risque de dysfonctionnement d\'organe',
+                detectedRisk: 'Risque de dysfonctionnement d\'organe détecté, envisager d\'ajouter des médicaments protecteurs',
+                recommendedReason: 'Raison de la Recommandation',
+                riskReduction: 'Réduction du Risque Estimée',
+                addThisDrug: 'Ajouter ce Médicament',
+                noteRecommendations: 'Note: Les médicaments recommandés sont à titre indicatif uniquement, l\'utilisation réelle doit être combinée avec le jugement clinique et la situation spécifique du patient',
+                clinicalRecommendations: 'Recommandations Cliniques',
+                noData: 'Aucune donnée pertinente',
+                riskyCombinations: 'Combinaisons de Médicaments à Risque Élevé',
+                effectiveCombinations: 'Combinaisons de Médicaments Efficaces',
+                relativeRisk: 'Risque Relatif',
+                comboWith: 'avec',
+                comboWithSuffix: 'combinaison',
+                potentialRiskReduction: 'Réduction Potentielle du Risque',
+                drugRecommendation: 'Recommandation de Médicament',
+                noRecommendationData: 'Risque de dysfonctionnement d\'organe détecté, mais aucune donnée de recommandation disponible',
+                suggestionAntioxidant: 'Suggestion: Envisager d\'utiliser des antioxydants (par ex., N-acétylcystéine), des vitamines, ou des médicaments protecteurs d\'organes selon les directives cliniques'
+            }
+        };
+        
+        // 获取翻译文本
+        function t(key) {
+            return i18n[currentLanguage][key] || key;
+        }
+        
+        // 翻译后端返回的interpretation文本
+        function translateInterpretation(interpretation) {
+            if (!interpretation) return '';
+            
+            // 如果当前是中文，直接返回
+            if (currentLanguage === 'zh') {
+                return interpretation;
+            }
+            
+            // 翻译中文interpretation到英文或法文
+            const translations = {
+                '高风险：该药物组合显著增加不良结局风险': {
+                    en: 'High Risk: This drug combination significantly increases adverse outcome risk',
+                    fr: 'Risque Élevé: Cette combinaison de médicaments augmente significativement le risque d\'issue défavorable'
+                },
+                '中等风险：该药物组合可能增加不良结局风险': {
+                    en: 'Medium Risk: This drug combination may increase adverse outcome risk',
+                    fr: 'Risque Moyen: Cette combinaison de médicaments peut augmenter le risque d\'issue défavorable'
+                },
+                '保护性：该药物组合可能降低不良结局风险': {
+                    en: 'Protective: This drug combination may reduce adverse outcome risk',
+                    fr: 'Protecteur: Cette combinaison de médicaments peut réduire le risque d\'issue défavorable'
+                },
+                '可能保护性：该药物组合可能略微降低不良结局风险': {
+                    en: 'Potentially Protective: This drug combination may slightly reduce adverse outcome risk',
+                    fr: 'Potentiellement Protecteur: Cette combinaison de médicaments peut légèrement réduire le risque d\'issue défavorable'
+                },
+                '中性：该药物组合对结局影响不明显': {
+                    en: 'Neutral: This drug combination has no significant effect on outcomes',
+                    fr: 'Neutre: Cette combinaison de médicaments n\'a pas d\'effet significatif sur les issues'
+                }
+            };
+            
+            // 精确匹配
+            if (translations[interpretation]) {
+                return translations[interpretation][currentLanguage] || interpretation;
+            }
+            
+            // 部分匹配（处理可能的变体）
+            for (const [chinese, trans] of Object.entries(translations)) {
+                if (interpretation.includes(chinese.split('：')[0]) || interpretation.includes(chinese.split('：')[1])) {
+                    return trans[currentLanguage] || interpretation;
+                }
+            }
+            
+            // 如果无法翻译，返回原文
+            return interpretation;
+        }
+        
+        // 切换语言
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            
+            // 更新语言按钮状态
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-lang') === lang) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // 更新HTML lang属性
+            document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+            
+            // 更新所有文本
+            updateTexts();
+        }
+        
+        // 更新所有文本内容
+        function updateTexts() {
+            // 更新标题和副标题
+            document.getElementById('title').textContent = t('title');
+            document.getElementById('subtitle').textContent = t('subtitle');
+            
+            // 更新表单标签
+            document.getElementById('section1Title').textContent = t('section1Title');
+            document.getElementById('drugSearchLabel').textContent = t('drugSearchLabel');
+            document.getElementById('drugSearch').placeholder = t('drugSearchPlaceholder');
+            document.getElementById('drugSearchHint').textContent = t('drugSearchHint');
+            document.getElementById('analyzeBtn').textContent = t('btnAnalyze');
+            
+            // 更新加载文本
+            document.getElementById('loadingText').textContent = t('loadingText');
+            
+            // 更新结果标题
+            document.getElementById('resultsTitle').textContent = t('resultsTitle');
+            document.getElementById('overallRiskTitle').textContent = t('overallRiskTitle');
+            document.getElementById('organPredictionTitle').textContent = t('organPredictionTitle');
+            
+            // 更新已选药物显示
+            updateSelectedDrugs();
+        }
+        
+        // 中文药物名称映射（扩展版）
+        const drugNameMap = {
+            '青霉素': ['penicillin', 'piperacillin', 'nafcillin', 'ampicillin', 'amoxicillin'],
+            '阿司匹林': ['aspirin'],
+            '阿司匹': ['aspirin'],
+            '醋酸泼尼松': ['prednisone', 'deltasone', 'methylprednisolone'],
+            '泼尼松': ['prednisone', 'deltasone'],
+            '泼尼': ['prednisone', 'deltasone'],
+            '头孢': ['cefazolin', 'ceftriaxone', 'cefepime', 'cephulac', 'cefuroxime'],
+            '头孢曲松': ['ceftriaxone'],
+            '头孢唑林': ['cefazolin'],
+            '头孢他啶': ['ceftazidime'],
+            '万古霉素': ['vancomycin'],
+            '呋塞米': ['furosemide'],
+            '布美他尼': ['bumetanide', 'bumex'],
+            '对乙酰氨基酚': ['acetaminophen', 'acetamin', 'tylenol'],
+            '他汀': ['atorvastatin', 'simvastatin', 'lipitor', 'zocor'],
+            '阿托伐他汀': ['atorvastatin', 'lipitor'],
+            '辛伐他汀': ['simvastatin', 'zocor'],
+            '胰岛素': ['insulin', 'humulin', 'lantus', 'levemir', 'glargine', 'lispro', 'detemir'],
+            '肝素': ['heparin'],
+            '地塞米松': ['dexamethasone', 'decadron'],
+            '甲泼尼龙': ['methylprednisolone', 'medrol'],
+            '环丙沙星': ['ciprofloxacin'],
+            '左氧氟沙星': ['levofloxacin', 'levaquin'],
+            '阿奇霉素': ['azithromycin'],
+            '美罗培南': ['meropenem', 'merrem'],
+            '哌拉西林': ['piperacillin', 'zosyn'],
+            '克林霉素': ['clindamycin'],
+            '甲硝唑': ['metronidazole', 'flagyl'],
+            '阿莫西林': ['amoxicillin', 'amoxil'],
+            '氨苄西林': ['ampicillin'],
+            '庆大霉素': ['gentamicin'],
+            '妥布霉素': ['tobramycin'],
+            '多西环素': ['doxycycline'],
+            '米诺环素': ['minocycline'],
+            '红霉素': ['erythromycin'],
+            '克拉霉素': ['clarithromycin'],
+            '莫西沙星': ['moxifloxacin'],
+            '诺氟沙星': ['norfloxacin'],
+            '氧氟沙星': ['ofloxacin'],
+            '利福平': ['rifampin', 'rifampicin'],
+            '异烟肼': ['isoniazid'],
+            '乙胺丁醇': ['ethambutol'],
+            '吡嗪酰胺': ['pyrazinamide']
+        };
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 应用保存的语言设置
+            switchLanguage(currentLanguage);
+            loadDrugs();
+            setupDrugSearch();
+        });
+        
+        // 加载所有药物列表
+        async function loadDrugs() {
+            try {
+                const response = await fetch(`${API_BASE}/drugs/list?limit=1000`);
+                const data = await response.json();
+                if (data.success) {
+                    allDrugs = data.drugs;
+                    console.log(`加载了 ${allDrugs.length} 种药物`);
+                }
+            } catch (error) {
+                console.error('加载药物列表失败:', error);
+                showError(t('errorApiConnection'));
+            }
+        }
+        
+        // 中文搜索转换为英文（改进版，支持部分匹配和模糊搜索）
+        function translateChineseToEnglish(query) {
+            const lowerQuery = query.toLowerCase().trim();
+            if (!lowerQuery) return null;
+            
+            // 精确匹配
+            for (const [chinese, englishNames] of Object.entries(drugNameMap)) {
+                if (chinese === lowerQuery || lowerQuery === chinese) {
+                    return englishNames;
+                }
+            }
+            
+            // 部分匹配（中文包含查询或查询包含中文）
+            for (const [chinese, englishNames] of Object.entries(drugNameMap)) {
+                if (chinese.includes(lowerQuery) || lowerQuery.includes(chinese)) {
+                    return englishNames;
+                }
+            }
+            
+            // 模糊匹配：检查查询是否包含中文名称的一部分
+            for (const [chinese, englishNames] of Object.entries(drugNameMap)) {
+                // 检查查询是否包含中文名称的任意字符
+                const chineseChars = chinese.split('');
+                const queryChars = lowerQuery.split('');
+                // 如果查询中的字符在中文名称中出现，可能是匹配的
+                if (queryChars.some(qc => chineseChars.includes(qc)) && query.length >= 2) {
+                    return englishNames;
+                }
+            }
+            
+            return null;
+        }
+        
+        // 反向查找：从英文药物名称查找对应的中文名称
+        function getChineseDrugName(englishDrug) {
+            if (!englishDrug) return null;
+            const lowerDrug = englishDrug.toLowerCase();
+            
+            for (const [chinese, englishNames] of Object.entries(drugNameMap)) {
+                if (englishNames.some(en => lowerDrug.includes(en.toLowerCase()) || en.toLowerCase().includes(lowerDrug))) {
+                    return chinese;
+                }
+            }
+            return null;
+        }
+        
+        // 设置药物搜索
+        function setupDrugSearch() {
+            const searchInput = document.getElementById('drugSearch');
+            const dropdown = document.getElementById('drugDropdown');
+            
+            searchInput.addEventListener('input', function() {
+                const query = this.value.trim();
+                if (query.length < 1) {
+                    dropdown.classList.remove('show');
+                    return;
+                }
+                
+                let filtered = [];
+                const lowerQuery = query.toLowerCase();
+                
+                // 1. 先检查是否是中文药物名称
+                const translated = translateChineseToEnglish(query);
+                if (translated) {
+                    // 查找匹配的英文药物（支持部分匹配）
+                    filtered = allDrugs.filter(drug => {
+                        const lowerDrug = drug.toLowerCase();
+                        return translated.some(en => {
+                            const lowerEn = en.toLowerCase();
+                            // 完全匹配或包含匹配
+                            return lowerDrug === lowerEn || 
+                                   lowerDrug.includes(lowerEn) || 
+                                   lowerEn.includes(lowerDrug);
+                        });
+                    }).slice(0, 20);
+                    
+                    // 显示中文提示（仅在中文语言环境下显示中文名称）
+                    if (filtered.length > 0) {
+                        dropdown.innerHTML = filtered.map(drug => {
+                            // 只在中文环境下显示中文名称
+                            if (currentLanguage === 'zh') {
+                                const chineseName = getChineseDrugName(drug);
+                                const displayName = chineseName ? `${drug} (${chineseName})` : drug;
+                                return `<div class="drug-option" onclick="selectDrug('${drug}')">${displayName}</div>`;
+                            } else {
+                                return `<div class="drug-option" onclick="selectDrug('${drug}')">${drug}</div>`;
+                            }
+                        }).join('');
+                        dropdown.classList.add('show');
+                        return;
+                    } else {
+                        // 找到了中文映射，但在药物列表中找不到对应的英文药物
+                        dropdown.innerHTML = `
+                            <div class="drug-option" style="color: #ff9800; cursor: default;">
+                                ⚠️ 找到中文名称 "${query}"，但未在药物列表中找到对应的英文药物
+                            </div>
+                            <div class="drug-option" style="color: #666; cursor: default; font-size: 12px;">
+                                建议：尝试输入英文名称，如：${translated.slice(0, 3).join(', ')}
+                            </div>
+                        `;
+                        dropdown.classList.add('show');
+                        return;
+                    }
+                }
+                
+                // 2. 英文搜索
+                filtered = allDrugs.filter(drug => 
+                    drug.toLowerCase().includes(lowerQuery)
+                ).slice(0, 20);
+                
+                if (filtered.length > 0) {
+                    dropdown.innerHTML = filtered.map(drug => 
+                        `<div class="drug-option" onclick="selectDrug('${drug}')">${drug}</div>`
+                    ).join('');
+                    dropdown.classList.add('show');
+                } else {
+                    // 未找到匹配，提供帮助信息
+                    let helpText = t('noMatchingDrugs');
+                    let suggestions = [];
+                    
+                    // 检查是否是中文输入但未在映射表中
+                    const isChinese = /[\u4e00-\u9fa5]/.test(query);
+                    if (isChinese) {
+                        helpText = `${t('noMatchingDrugs')}: "${query}"`;
+                        suggestions.push(t('chineseNotInMap'));
+                        suggestions.push(t('errorTryEnglish'));
+                        // 提供一些常见药物的建议
+                        const commonSuggestions = ['aspirin', 'prednisone', 'piperacillin', 'vancomycin'];
+                        suggestions.push(`${t('tryCommonDrugs')}: ${commonSuggestions.join(', ')}`);
+                    } else {
+                        suggestions.push(t('checkSpelling'));
+                        suggestions.push(t('tryPartialName'));
+                    }
+                    
+                    dropdown.innerHTML = `
+                        <div class="drug-option" style="color: #999; cursor: default; padding: 15px;">
+                            <div style="margin-bottom: 8px;">${helpText}</div>
+                            <div style="font-size: 12px; color: #666;">
+                                ${suggestions.map(s => `<div style="margin: 4px 0;">• ${s}</div>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                    dropdown.classList.add('show');
+                }
+            });
+            
+            // 支持回车键快速选择第一个结果
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && dropdown.classList.contains('show')) {
+                    const firstOption = dropdown.querySelector('.drug-option');
+                    if (firstOption && firstOption.onclick) {
+                        firstOption.click();
+                    }
+                }
+            });
+            
+            // 点击外部关闭下拉框
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                }
+            });
+        }
+        
+        // 快速添加常用药物组合
+        function addCommonCombination() {
+            const commonDrugs = {
+                '青霉素类': ['piperacillin', 'nafcillin'],
+                '头孢类': ['ceftriaxone', 'cefazolin'],
+                '阿司匹林+泼尼松': ['aspirin', 'prednisone'],
+                '青霉素+阿司匹林+泼尼松': ['piperacillin', 'aspirin', 'prednisone']
+            };
+            
+            // 可以添加一个快速选择按钮
+            console.log('常用组合:', commonDrugs);
+        }
+        
+        // 选择药物
+        function selectDrug(drug) {
+            if (!selectedDrugs.includes(drug)) {
+                selectedDrugs.push(drug);
+                updateSelectedDrugs();
+            }
+            document.getElementById('drugSearch').value = '';
+            document.getElementById('drugDropdown').classList.remove('show');
+        }
+        
+        // 更新已选药物显示
+        function updateSelectedDrugs() {
+            const container = document.getElementById('selectedDrugs');
+            if (selectedDrugs.length === 0) {
+                container.innerHTML = `<div style="color: #999; padding: 10px;">${t('noDrugsSelected')}</div>`;
+            } else {
+                container.innerHTML = selectedDrugs.map(drug => {
+                    // 只在中文环境下显示中文名称
+                    let displayName = drug;
+                    if (currentLanguage === 'zh') {
+                        const chineseName = getChineseDrugName(drug);
+                        displayName = chineseName ? `${drug} (${chineseName})` : drug;
+                    }
+                    return `<div class="drug-tag">
+                        ${displayName}
+                        <span class="remove" onclick="removeDrug('${drug}')">×</span>
+                    </div>`;
+                }).join('');
+            }
+            
+            const btn = document.getElementById('analyzeBtn');
+            btn.disabled = selectedDrugs.length < 2;
+            if (selectedDrugs.length < 2) {
+                btn.title = t('selectAtLeast2');
+            } else {
+                btn.title = `${t('currentSelected')} ${selectedDrugs.length} ${t('drugs')}，${t('btnAnalyze')}`;
+            }
+        }
+        
+        // 移除药物
+        function removeDrug(drug) {
+            selectedDrugs = selectedDrugs.filter(d => d !== drug);
+            updateSelectedDrugs();
+        }
+        
+        // 分析药物组合
+        async function analyzeCombination() {
+            if (selectedDrugs.length < 2) {
+                alert(`${t('selectAtLeast2')}\n\n${t('currentSelected')}: ${selectedDrugs.length} ${t('drugs')}\n${t('selectedDrugs')}: ${selectedDrugs.join(', ') || t('noDrugsSelected')}`);
+                return;
+            }
+            
+            console.log('开始分析药物组合:', selectedDrugs);
+            
+            // 显示加载状态
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('error').style.display = 'none';
+            
+            try {
+                // 构建患者数据
+                const patientData = {};
+                selectedDrugs.forEach(drug => {
+                    patientData[drug] = 1;
+                });
+                
+                // 添加实验室指标（默认正常值）
+                patientData.bun = 0;
+                patientData.inr = 0;
+                patientData.lactate = 0;
+                patientData.platelets = 0;
+                patientData.wbc = 0;
+                patientData.albu_lab = 0;
+                patientData.o2sat = 0;
+                patientData.pao2 = 0;
+                patientData.paco2 = 0;
+                patientData.ph = 0;
+                patientData.bands = 0;
+                patientData.hct = 0;
+                
+                // 同时调用药物组合分析、器官功能预测和药物推荐
+                const [combinationResponse, predictResponse, recommendResponse] = await Promise.all([
+                    fetch(`${API_BASE}/drug_combinations`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(patientData)
+                    }),
+                    fetch(`${API_BASE}/predict`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(patientData)
+                    }).catch(e => null), // 如果预测失败，继续显示组合分析
+                    fetch(`${API_BASE}/drugs/recommend`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ drugs: selectedDrugs })
+                    }).catch(e => null) // 如果推荐失败，继续显示其他结果
+                ]);
+                
+                const combinationData = await combinationResponse.json();
+                let predictData = null;
+                if (predictResponse) {
+                    try {
+                        if (predictResponse.ok) {
+                            predictData = await predictResponse.json();
+                            console.log('预测API响应:', predictData);
+                        } else {
+                            const errorData = await predictResponse.json().catch(() => ({}));
+                            console.warn('预测API返回错误:', predictResponse.status, errorData);
+                            // 即使预测失败，也继续显示其他结果
+                            const errorMsg = currentLanguage === 'zh' ? '预测服务不可用' : 
+                                           currentLanguage === 'fr' ? 'Service de prédiction indisponible' : 
+                                           'Prediction service unavailable';
+                            predictData = { error: errorData.error || errorMsg };
+                        }
+                    } catch (e) {
+                        console.warn('预测API调用失败:', e);
+                        const errorMsg = currentLanguage === 'zh' ? '无法连接到预测服务' : 
+                                       currentLanguage === 'fr' ? 'Impossible de se connecter au service de prédiction' : 
+                                       'Cannot connect to prediction service';
+                        predictData = { error: errorMsg };
+                    }
+                } else {
+                    console.warn('预测API请求失败，predictResponse为null');
+                    const errorMsg = currentLanguage === 'zh' ? '预测服务未响应' : 
+                                   currentLanguage === 'fr' ? 'Le service de prédiction n\'a pas répondu' : 
+                                   'Prediction service did not respond';
+                    predictData = { error: errorMsg };
+                }
+                
+                let recommendData = null;
+                if (recommendResponse) {
+                    try {
+                        recommendData = await recommendResponse.json();
+                    } catch (e) {
+                        console.warn('推荐API调用失败:', e);
+                    }
+                }
+                
+                if (combinationData.success) {
+                    displayResults(combinationData.analysis, predictData, recommendData);
+                } else {
+                    const errorMsg = currentLanguage === 'zh' ? '分析失败' : 
+                                   currentLanguage === 'fr' ? 'Échec de l\'analyse' : 
+                                   'Analysis failed';
+                    throw new Error(combinationData.error || errorMsg);
+                }
+            } catch (error) {
+                const errorPrefix = currentLanguage === 'zh' ? '分析失败: ' : 
+                                  currentLanguage === 'fr' ? 'Échec de l\'analyse: ' : 
+                                  'Analysis failed: ';
+                showError(errorPrefix + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+            }
+        }
+        
+        // 显示结果
+        function displayResults(analysis, predictions = null, recommendations = null) {
+            // 总体风险
+            const overallRisk = analysis.overall_risk;
+            const riskClass = overallRisk === 'high' ? 'risk-high' : 
+                            overallRisk === 'medium' ? 'risk-medium' : 'risk-low';
+            const riskText = overallRisk === 'high' ? t('highRisk') : 
+                           overallRisk === 'medium' ? t('mediumRisk') : t('lowRisk');
+            
+            document.getElementById('overallRisk').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="label">${t('overallRiskLevel')}</div>
+                        <div class="value"><span class="risk-badge ${riskClass}">${riskText}</span></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="label">${t('averageRelativeRisk')}</div>
+                        <div class="value">${analysis.average_relative_risk.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="label">${t('maxRelativeRisk')}</div>
+                        <div class="value">${analysis.max_relative_risk.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="label">${t('analyzedCombinations')}</div>
+                        <div class="value">${analysis.analyzed_combinations}</div>
+                    </div>
+                </div>
+            `;
+            
+            // 多器官功能障碍预测标签页
+            const organTypes = [
+                { id: 'kidney', name: t('kidneyAbnormal'), key: 'kidney_abnormal', desc: currentLanguage === 'zh' ? `${t('basedOn')} BUN ${t('predict')} ${t('kidneyAbnormal')} ${t('risk')}` : `Predict ${t('kidneyAbnormal')} ${t('risk')} based on BUN and other indicators` },
+                { id: 'liver', name: t('liverAbnormal'), key: 'liver_abnormal', desc: currentLanguage === 'zh' ? `${t('basedOn')} INR、${t('basedOn')} ${t('predict')} ${t('liverAbnormal')} ${t('risk')}` : `Predict ${t('liverAbnormal')} ${t('risk')} based on INR, albumin and other indicators` },
+                { id: 'organ', name: t('organAbnormal'), key: 'organ_abnormal', desc: currentLanguage === 'zh' ? `${t('basedOn')} ${t('predict')} ${t('kidneyAbnormal')} ${t('risk')}` : `Comprehensive prediction of kidney and liver dysfunction ${t('risk')}` }
+            ];
+            
+            let tabsHtml = '';
+            let contentHtml = '';
+            
+            organTypes.forEach((organ, index) => {
+                const active = index === 0 ? 'active' : '';
+                tabsHtml += `<button class="outcome-tab ${active}" onclick="switchOrgan('${organ.id}')">${organ.name}</button>`;
+                
+                let organHtml = `<div class="outcome-content ${active}" id="organ-${organ.id}">`;
+                
+                // 显示预测结果
+                // 检查是否有错误
+                if (predictions && predictions.error) {
+                    organHtml += `
+                        <div class="combination-item" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                            <h4>${organ.name} ${t('predict')}</h4>
+                            <p style="color: #856404; margin-bottom: 10px;">
+                                ⚠️ ${predictions.error}
+                            </p>
+                            <div style="background: white; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                                <p style="font-size: 12px; color: #666; margin-bottom: 5px;"><strong>${t('solution')}:</strong></p>
+                                <ol style="font-size: 12px; color: #666; margin-left: 20px; padding-left: 0;">
+                                    <li>${t('checkApiRunning')}</li>
+                                    <li>${t('checkApiHealth')}: <a href="http://localhost:5003/health" target="_blank">http://localhost:5003/health</a></li>
+                                    <li>${t('restartApi')}: <code>python3 cdss_api.py</code></li>
+                                    <li>${t('checkApiLogs')}</li>
+                                </ol>
+                            </div>
+                        </div>
+                    `;
+                } else if (predictions && predictions.predictions && predictions.predictions[organ.key]) {
+                    const pred = predictions.predictions[organ.key];
+                    const isAbnormal = pred.prediction === 1;
+                    const probability = pred.probability !== null ? (pred.probability * 100).toFixed(2) : 'N/A';
+                    const riskLevel = pred.probability > 0.5 ? t('highRisk') : pred.probability > 0.3 ? t('mediumRisk') : t('lowRisk');
+                    const riskClass = pred.probability > 0.5 ? 'risk-high' : pred.probability > 0.3 ? 'risk-medium' : 'risk-low';
+                    
+                    organHtml += `
+                        <div class="combination-item" style="background: ${isAbnormal ? '#fee' : '#efe'}; border-left: 4px solid ${isAbnormal ? '#dc3545' : '#28a745'};">
+                            <h4>${organ.name} ${t('predictionResult')}</h4>
+                            <p style="color: #666; font-size: 12px; margin-bottom: 15px;">${organ.desc}</p>
+                            <div style="margin: 15px 0;">
+                                <p><strong>${t('predictionStatus')}:</strong> 
+                                    <span class="risk-badge ${riskClass}" style="font-size: 14px; margin-left: 10px;">
+                                        ${isAbnormal ? `⚠️ ${t('abnormal')}` : `✅ ${t('normal')}`}
+                                    </span>
+                                </p>
+                                <p><strong>${t('abnormalProbability')}:</strong> <span style="font-size: 18px; font-weight: bold; color: ${isAbnormal ? '#c33' : '#155724'};">${probability}%</span></p>
+                                <p><strong>${t('riskLevel')}:</strong> ${riskLevel}</p>
+                            </div>
+                            ${isAbnormal ? 
+                                `<p style="color: #c33; font-weight: bold; padding: 10px; background: #fff3cd; border-radius: 5px;">⚠️ ${t('suggestMonitor')}</p>` : 
+                                `<p style="color: #155724; padding: 10px; background: #d4edda; border-radius: 5px;">✅ ${t('predictionNormal')}</p>`}
+                        </div>
+                    `;
+                } else {
+                    // 检查是否是API错误
+                    const hasError = predictions && predictions.error;
+                    const errorMsg = hasError ? predictions.error : t('modelNotLoaded');
+                    
+                    organHtml += `
+                        <div class="combination-item" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                            <h4>${organ.name} ${t('predict')}</h4>
+                            <p style="color: #856404; margin-bottom: 10px;">
+                                ⚠️ ${errorMsg}
+                            </p>
+                            <div style="background: white; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                                <p style="font-size: 12px; color: #666; margin-bottom: 5px;"><strong>${t('solution')}：</strong></p>
+                                <ol style="font-size: 12px; color: #666; margin-left: 20px; padding-left: 0;">
+                                    <li>${t('checkApiRunning')}</li>
+                                    <li>${t('checkApiHealth')}: <a href="http://localhost:5003/health" target="_blank">http://localhost:5003/health</a></li>
+                                    <li>${t('restartApi')}: <code>python3 cdss_api.py</code></li>
+                                    <li>${t('checkApiLogs')}</li>
+                                </ol>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // 显示相关的药物组合分析
+                const risky = analysis.risky_combinations || [];
+                const effective = analysis.effective_combinations || [];
+                
+                if (risky.length > 0) {
+                    organHtml += `<h4 style="color: #c33; margin-top: 20px;">⚠️ ${t('riskyCombinations')}</h4>`;
+                    risky.forEach(combo => {
+                        organHtml += `
+                            <div class="combination-item">
+                                <h4>${combo.drug1} + ${combo.drug2}</h4>
+                                <p><strong>${t('relativeRisk')}:</strong> ${combo.relative_risk.toFixed(2)}</p>
+                                <p>${translateInterpretation(combo.interpretation || '')}</p>
+                            </div>
+                        `;
+                    });
+                }
+                
+                if (effective.length > 0) {
+                    organHtml += `<h4 style="color: #155724; margin-top: 20px;">✅ ${t('effectiveCombinations')}</h4>`;
+                    effective.forEach(combo => {
+                        organHtml += `
+                            <div class="combination-item">
+                                <h4>${combo.drug1} + ${combo.drug2}</h4>
+                                <p><strong>${t('relativeRisk')}:</strong> ${combo.relative_risk.toFixed(2)}</p>
+                                <p>${translateInterpretation(combo.interpretation || '')}</p>
+                            </div>
+                        `;
+                    });
+                }
+                
+                if (risky.length === 0 && effective.length === 0 && (!predictions || !predictions.predictions)) {
+                    organHtml += `<p style="color: #666; padding: 20px;">${t('noData')}</p>`;
+                }
+                
+                organHtml += '</div>';
+                contentHtml += organHtml;
+            });
+            
+            document.getElementById('outcomeTabs').innerHTML = tabsHtml;
+            document.getElementById('outcomeContent').innerHTML = contentHtml;
+            
+            // 建议和推荐药物
+            let recommendationsHtml = '';
+            
+            // 显示临床建议
+            if (analysis.recommendations && analysis.recommendations.length > 0) {
+                recommendationsHtml += `
+                    <h4>💡 ${t('clinicalRecommendations')}</h4>
+                    <ul>
+                        ${analysis.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                    </ul>
+                `;
+            }
+            
+            // 显示推荐药物（如果预测到高风险或中等风险）
+            const hasHighRisk = predictions && predictions.predictions && 
+                Object.values(predictions.predictions).some(p => 
+                    p.prediction === 1 || (p.probability && p.probability > 0.2)
+                );
+            
+            // 或者如果药物组合分析显示高风险
+            const hasCombinationRisk = analysis.overall_risk === 'high' || analysis.overall_risk === 'medium';
+            
+            const shouldShowRecommendations = (hasHighRisk || hasCombinationRisk) && 
+                                             recommendations && recommendations.success && 
+                                             recommendations.recommendations.length > 0;
+            
+            if (shouldShowRecommendations) {
+                recommendationsHtml += `
+                    <h4 style="margin-top: 20px; color: #0c5460;">💊 ${t('preventOrganDysfunction')}</h4>
+                    <p style="color: #666; font-size: 12px; margin-bottom: 15px;">
+                        ${t('basedOnAnalysis')}：
+                    </p>
+                    ${hasHighRisk ? `<p style="color: #c33; font-size: 12px; margin-bottom: 15px; padding: 10px; background: #fff3cd; border-radius: 5px;">⚠️ ${t('detectedRisk')}</p>` : ''}
+                    <div style="display: grid; gap: 10px;">
+                        ${recommendations.recommendations.map(rec => `
+                            <div class="combination-item" style="background: #d1ecf1; border-left: 4px solid #0c5460;">
+                                <h4 style="color: #0c5460; margin-bottom: 8px;">
+                                    ${rec.drug}
+                                    ${rec.best_combo_with ? `<span style="font-size: 12px; color: #666;">(${currentLanguage === 'zh' ? `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}` : currentLanguage === 'fr' ? `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}` : `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}`})</span>` : ''}
+                                </h4>
+                                <p style="color: #0c5460; margin: 5px 0;">
+                                    <strong>${t('recommendedReason')}:</strong> ${rec.reason || rec.potential_benefit || (currentLanguage === 'zh' ? '可能降低器官功能异常风险' : currentLanguage === 'fr' ? 'Peut réduire le risque de dysfonctionnement d\'organe' : 'May reduce organ dysfunction risk')}
+                                </p>
+                                ${rec.risk_reduction > 0 ? `
+                                    <p style="color: #0c5460; font-size: 12px; margin-top: 5px;">
+                                        ${t('potentialRiskReduction')}: ${(rec.risk_reduction * 100).toFixed(1)}%
+                                    </p>
+                                ` : ''}
+                                <button onclick="addRecommendedDrug('${rec.drug}')" 
+                                        style="margin-top: 10px; padding: 6px 15px; background: #0c5460; color: white; 
+                                               border: none; border-radius: 5px; cursor: pointer; font-size: 12px;">
+                                    ➕ ${t('addThisDrug')}
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <p style="color: #999; font-size: 11px; margin-top: 15px;">
+                        ${t('noteRecommendations')}
+                    </p>
+                `;
+            } else if (hasHighRisk || hasCombinationRisk) {
+                recommendationsHtml += `
+                    <h4 style="margin-top: 20px; color: #856404;">💊 ${t('drugRecommendation')}</h4>
+                    <p style="color: #666;">${t('noRecommendationData')}</p>
+                    <p style="color: #999; font-size: 11px; margin-top: 10px;">
+                        ${t('suggestionAntioxidant')}
+                    </p>
+                `;
+            }
+            
+            if (recommendationsHtml) {
+                document.getElementById('recommendations').innerHTML = recommendationsHtml;
+            }
+            
+            // 显示结果
+            document.getElementById('results').classList.add('show');
+        }
+        
+        // 添加推荐药物
+        function addRecommendedDrug(drug) {
+            if (!selectedDrugs.includes(drug)) {
+                selectedDrugs.push(drug);
+                updateSelectedDrugs();
+                // 滚动到已选药物区域
+                document.getElementById('selectedDrugs').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                alert(t('drugAlreadySelected'));
+            }
+        }
+        
+        // 切换器官类型
+        function switchOrgan(organId) {
+            currentOrgan = organId;
+            
+            // 更新标签页
+            document.querySelectorAll('.outcome-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 更新内容
+            document.querySelectorAll('.outcome-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`organ-${organId}`).classList.add('active');
+        }
+        
+        // 显示错误
+        function showError(message) {
+            document.getElementById('error').textContent = message;
+            document.getElementById('error').style.display = 'block';
+        }
+        
+        </script>
+    </body>
+</html>
+
