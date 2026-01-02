@@ -53,6 +53,7 @@ def download_with_b2sdk():
         
         from b2sdk.v1 import InMemoryAccountInfo, B2Api
         from b2sdk.v1.exception import B2Error
+        from b2sdk.v1.download_dest import DownloadDestLocalFile
         
         # 初始化 B2 API
         info = InMemoryAccountInfo()
@@ -61,10 +62,10 @@ def download_with_b2sdk():
         
         # 获取bucket并下载文件
         bucket = b2_api.get_bucket_by_name(B2_BUCKET_NAME)
-        downloaded_file = bucket.download_file_by_name(FILE_NAME)
         
-        # 保存文件
-        downloaded_file.save_to(FILE_NAME)
+        # 使用 DownloadDestLocalFile 作为下载目标
+        download_dest = DownloadDestLocalFile(FILE_NAME)
+        bucket.download_file_by_name(FILE_NAME, download_dest)
         
         print("✅ 下载完成（使用 b2sdk）")
         return True
@@ -118,10 +119,6 @@ def main():
             print("❌ 公开URL下载失败")
             print("提示: 请设置 B2_APPLICATION_KEY 环境变量，或将bucket设置为公开访问")
             return 1
-    
-    # 尝试使用 b2 工具下载
-    if download_with_b2():
-        return 0
     
     # 首先尝试使用 b2sdk（推荐）
     if download_with_b2sdk():
