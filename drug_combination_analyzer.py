@@ -289,7 +289,7 @@ class DrugCombinationAnalyzer:
     def _interpret_risk(self, relative_risk, risk_difference):
         """解释风险"""
         if relative_risk > 1.5:
-            return "高风险：该药物组合显著增加不良结局风险"
+            return "High risk: This drug combination significantly increases adverse outcome risk"
         elif relative_risk > 1.2:
             return "中等风险：该药物组合可能增加不良结局风险"
         elif relative_risk < 0.8:
@@ -455,28 +455,28 @@ class DrugCombinationAnalyzer:
         }
     
     def _generate_combination_recommendations(self, risky_combos, effective_combos, overall_risk):
-        """生成药物组合建议"""
+        """Generate drug combination recommendations"""
         recommendations = []
         
         if overall_risk == 'high':
-            recommendations.append("⚠️ 高风险：患者当前药物组合存在高风险，建议重新评估用药方案")
+            recommendations.append("⚠️ High risk: Patient's current drug combination has high risk, recommend re-evaluating medication regimen")
         elif overall_risk == 'medium':
-            recommendations.append("🟡 中等风险：建议密切监测患者状况，考虑调整用药")
+            recommendations.append("🟡 Medium risk: Recommend closely monitoring patient condition, consider adjusting medication")
         
         if risky_combos:
-            recommendations.append(f"🔴 发现 {len(risky_combos)} 个高风险药物组合：")
-            for combo in risky_combos[:3]:  # 只显示前3个
+            recommendations.append(f"🔴 Found {len(risky_combos)} high-risk drug combination(s):")
+            for combo in risky_combos[:3]:  # Show only first 3
                 recommendations.append(
                     f"   - {combo['drug1']} + {combo['drug2']}: "
-                    f"相对风险 {combo['relative_risk']:.2f}"
+                    f"Relative risk {combo['relative_risk']:.2f}"
                 )
         
         if effective_combos:
-            recommendations.append(f"✅ 发现 {len(effective_combos)} 个有效药物组合：")
-            for combo in effective_combos[:3]:  # 只显示前3个
+            recommendations.append(f"✅ Found {len(effective_combos)} effective drug combination(s):")
+            for combo in effective_combos[:3]:  # Show only first 3
                 recommendations.append(
                     f"   - {combo['drug1']} + {combo['drug2']}: "
-                    f"相对风险 {combo['relative_risk']:.2f}（保护性）"
+                    f"Relative risk {combo['relative_risk']:.2f} (protective)"
                 )
         
         if not recommendations:
