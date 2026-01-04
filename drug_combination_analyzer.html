@@ -780,31 +780,42 @@
         function translateInterpretation(interpretation) {
             if (!interpretation) return '';
             
-            // If current language is Chinese, return directly
-            if (currentLanguage === 'zh') {
+            // If current language is Chinese or English, return as is (backend returns English)
+            if (currentLanguage === 'zh' || currentLanguage === 'en') {
                 return interpretation;
             }
             
-            // Translate Chinese interpretation to English or French
+            // Translate English interpretation to French (backend now returns English)
             const translations = {
+                'High risk: This drug combination significantly increases adverse outcome risk': {
+                    fr: 'Risque Élevé: Cette combinaison de médicaments augmente significativement le risque d\'issue défavorable'
+                },
+                'Medium risk: This drug combination may increase adverse outcome risk': {
+                    fr: 'Risque Moyen: Cette combinaison de médicaments peut augmenter le risque d\'issue défavorable'
+                },
+                'Protective: This drug combination may reduce adverse outcome risk': {
+                    fr: 'Protecteur: Cette combinaison de médicaments peut réduire le risque d\'issue défavorable'
+                },
+                'Possibly protective: This drug combination may slightly reduce adverse outcome risk': {
+                    fr: 'Potentiellement Protecteur: Cette combinaison de médicaments peut légèrement réduire le risque d\'issue défavorable'
+                },
+                'Neutral: This drug combination has no significant effect on outcome': {
+                    fr: 'Neutre: Cette combinaison de médicaments n\'a pas d\'effet significatif sur les issues'
+                },
+                // Legacy Chinese translations (for backward compatibility)
                 '高风险：该药物组合显著增加不良结局风险': {
-                    en: 'High Risk: This drug combination significantly increases adverse outcome risk',
                     fr: 'Risque Élevé: Cette combinaison de médicaments augmente significativement le risque d\'issue défavorable'
                 },
                 '中等风险：该药物组合可能增加不良结局风险': {
-                    en: 'Medium Risk: This drug combination may increase adverse outcome risk',
                     fr: 'Risque Moyen: Cette combinaison de médicaments peut augmenter le risque d\'issue défavorable'
                 },
                 '保护性：该药物组合可能降低不良结局风险': {
-                    en: 'Protective: This drug combination may reduce adverse outcome risk',
                     fr: 'Protecteur: Cette combinaison de médicaments peut réduire le risque d\'issue défavorable'
                 },
                 '可能保护性：该药物组合可能略微降低不良结局风险': {
-                    en: 'Potentially Protective: This drug combination may slightly reduce adverse outcome risk',
                     fr: 'Potentiellement Protecteur: Cette combinaison de médicaments peut légèrement réduire le risque d\'issue défavorable'
                 },
                 '中性：该药物组合对结局影响不明显': {
-                    en: 'Neutral: This drug combination has no significant effect on outcomes',
                     fr: 'Neutre: Cette combinaison de médicaments n\'a pas d\'effet significatif sur les issues'
                 }
             };
@@ -814,9 +825,26 @@
                 return translations[interpretation][currentLanguage] || interpretation;
             }
             
-            // Partial match (handle possible variants)
-            for (const [chinese, trans] of Object.entries(translations)) {
-                if (interpretation.includes(chinese.split('：')[0]) || interpretation.includes(chinese.split('：')[1])) {
+            // Partial match for English messages
+            if (interpretation.includes('High risk:')) {
+                return 'Risque Élevé: Cette combinaison de médicaments augmente significativement le risque d\'issue défavorable';
+            }
+            if (interpretation.includes('Medium risk:')) {
+                return 'Risque Moyen: Cette combinaison de médicaments peut augmenter le risque d\'issue défavorable';
+            }
+            if (interpretation.includes('Protective:')) {
+                return 'Protecteur: Cette combinaison de médicaments peut réduire le risque d\'issue défavorable';
+            }
+            if (interpretation.includes('Possibly protective:')) {
+                return 'Potentiellement Protecteur: Cette combinaison de médicaments peut légèrement réduire le risque d\'issue défavorable';
+            }
+            if (interpretation.includes('Neutral:')) {
+                return 'Neutre: Cette combinaison de médicaments n\'a pas d\'effet significatif sur les issues';
+            }
+            
+            // Partial match (handle possible variants) - legacy Chinese support
+            for (const [key, trans] of Object.entries(translations)) {
+                if (key.includes('：') && interpretation.includes(key.split('：')[0])) {
                     return trans[currentLanguage] || interpretation;
                 }
             }
