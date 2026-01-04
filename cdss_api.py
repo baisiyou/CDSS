@@ -16,14 +16,10 @@ from drug_combination_analyzer import DrugCombinationAnalyzer
 from drug_side_effects import DrugSideEffects
 
 app = Flask(__name__)
-# Enable CORS with more permissive settings for better compatibility
-CORS(app, resources={
-    r"/*": {
-        "origins": "*",
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+# Enable CORS - allow all origins
+# Note: We use CORS(app) which handles all CORS headers automatically
+# Do NOT add CORS headers in after_request hook to avoid duplicate headers
+CORS(app)
 
 # Global variables
 predictor = None
@@ -123,14 +119,8 @@ def load_models():
         traceback.print_exc()
         print("Continuing to start service, but some features may be unavailable")
 
-@app.after_request
-def after_request(response):
-    """Add CORS headers to all responses"""
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-    response.headers.add('Access-Control-Max-Age', '3600')
-    return response
+# Removed after_request hook - CORS is handled by CORS(app) above
+# Adding CORS headers here would cause duplicate headers error
 
 @app.route('/', methods=['GET'])
 def index():
