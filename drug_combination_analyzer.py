@@ -287,17 +287,17 @@ class DrugCombinationAnalyzer:
         }
     
     def _interpret_risk(self, relative_risk, risk_difference):
-        """解释风险"""
+        """Interpret risk level"""
         if relative_risk > 1.5:
             return "High risk: This drug combination significantly increases adverse outcome risk"
         elif relative_risk > 1.2:
-            return "中等风险：该药物组合可能增加不良结局风险"
+            return "Medium risk: This drug combination may increase adverse outcome risk"
         elif relative_risk < 0.8:
-            return "保护性：该药物组合可能降低不良结局风险"
+            return "Protective: This drug combination may reduce adverse outcome risk"
         elif relative_risk < 0.9:
-            return "可能保护性：该药物组合可能略微降低不良结局风险"
+            return "Possibly protective: This drug combination may slightly reduce adverse outcome risk"
         else:
-            return "中性：该药物组合对结局影响不明显"
+            return "Neutral: This drug combination has no significant effect on outcome"
     
     def find_effective_combinations(self, outcome='death', min_improvement=0.1, top_n=20):
         """
