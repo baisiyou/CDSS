@@ -58,17 +58,18 @@ def load_models():
         warning_system = DrugInteractionWarning()
         print("药物预警系统初始化成功")
         
-        # 初始化药物组合分析器（延迟加载数据以提高启动速度）
+        # 初始化药物组合分析器（为了节省内存，只加载列名，不加载完整数据）
         combination_analyzer = DrugCombinationAnalyzer()
         data_path = 'eicu_mimic_lab_time.csv'
         if os.path.exists(data_path):
             try:
-                # 只加载部分数据用于快速启动（可以后续优化）
-                print("正在加载药物组合分析数据（这可能需要一些时间）...")
-                combination_analyzer.load_data(data_path)
-                print("药物组合分析系统初始化成功")
+                # 只读取列名，不加载完整数据（节省内存，适用于免费版512MB限制）
+                # 对于/drugs/list端点，只需要药物列表，不需要完整数据
+                print("正在读取药物列表（仅列名，不加载完整数据以节省内存）...")
+                combination_analyzer.load_data(data_path, load_full_data=False)
+                print("药物列表加载成功（完整数据分析功能不可用，但药物列表可用）")
             except Exception as e:
-                print(f"警告：药物组合分析系统初始化失败: {e}")
+                print(f"警告：药物列表加载失败: {e}")
                 print("药物组合分析功能将不可用，但其他功能正常")
                 import traceback
                 traceback.print_exc()

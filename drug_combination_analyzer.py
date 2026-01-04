@@ -27,16 +27,48 @@ class DrugCombinationAnalyzer:
         if data_path:
             self.load_data(data_path)
     
-    def load_data(self, data_path):
-        """加载数据"""
-        print(f"正在加载数据: {data_path}")
-        self.data = pd.read_csv(data_path)
-        print(f"数据形状: {self.data.shape}")
-        self._identify_drug_columns()
-        return self.data
+    def load_data(self, data_path, load_full_data=True):
+        """
+        加载数据
+        load_full_data: 如果为False，只读取列名（用于节省内存）
+        """
+        if load_full_data:
+            print(f"正在加载数据: {data_path}")
+            self.data = pd.read_csv(data_path)
+            print(f"数据形状: {self.data.shape}")
+            self._identify_drug_columns()
+            return self.data
+        else:
+            # 只读取列名，不加载数据（节省内存）
+            print(f"正在读取数据文件列名: {data_path}")
+            import pandas as pd
+            # 只读取第一行来获取列名
+            self.data = None  # 不加载完整数据
+            df_columns = pd.read_csv(data_path, nrows=0)  # nrows=0 只读取列名
+            self._identify_drug_columns_from_columns(df_columns.columns)
+            return None
+    
+    def _identify_drug_columns_from_columns(self, columns):
+        """从列名列表中识别药物列（不依赖self.data）"""
+        exclude_cols = [
+            'Unnamed: 0', 'patientunitstayid', 'hospitalid', 'time_window',
+            'death', 'ventilator', 'sepsis',
+            'bmi_underweight', 'bmi_normal', 'bmi_overweight', 'bmi_obesity',
+            'race_african', 'race_hispanic', 'race_caucasion', 'race_asian', 'race_native',
+            'sex_is_male', 'sex_is_female',
+            '< 30', '30 - 39', '40 - 49', '50 - 59', '60 - 69', '70 - 79', '80 - 89', '> 89',
+            'o2sat', 'pao2', 'paco2', 'ph', 'albu_lab', 'bands', 'bun', 'hct', 
+            'inr', 'lactate', 'platelets', 'wbc'
+        ]
+        
+        self.drug_columns = [col for col in columns if col not in exclude_cols]
+        print(f"识别到 {len(self.drug_columns)} 种药物（仅列名，未加载数据）")
+        return self.drug_columns
     
     def _identify_drug_columns(self):
-        """识别药物列"""
+        """识别药物列（需要self.data已加载）"""
+        if self.data is None:
+            raise ValueError("数据未加载，无法识别药物列")
         exclude_cols = [
             'Unnamed: 0', 'patientunitstayid', 'hospitalid', 'time_window',
             'death', 'ventilator', 'sepsis',
