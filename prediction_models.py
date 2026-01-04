@@ -22,8 +22,10 @@ class OrganFunctionPredictor:
         self.feature_importance = {}
         
     def _get_model(self, target_name):
-        """获取指定类型的模型"""
+        """Get model of specified type"""
         if self.model_type == 'random_forest':
+            # Remove monotonic_cst parameter to avoid compatibility issues
+            # This parameter was introduced in scikit-learn 1.4+
             return RandomForestClassifier(
                 n_estimators=100,
                 max_depth=10,
@@ -144,10 +146,74 @@ class OrganFunctionPredictor:
         print(f"模型已保存到: {filepath}")
     
     def load(self, filepath):
-        """加载模型"""
-        data = joblib.load(filepath)
-        self.models = data['models']
-        self.model_type = data['model_type']
-        self.feature_importance = data.get('feature_importance', {})
-        print(f"模型已从 {filepath} 加载")
+        """Load model with compatibility handling for scikit-learn version differences"""
+        import sklearn
+        
+        try:
+            data = joblib.load(filepath)
+            self.models = data['models']
+            self.model_type = data['model_type']
+            self.feature_importance = data.get('feature_importance', {})
+            
+            # Fix compatibility issue: handle monotonic_cst attribute
+            # This attribute was introduced in scikit-learn 1.4+ but may cause issues
+            # when loading models trained with different versions
+            for model_name, model in self.models.items():
+                if hasattr(model, 'estimators_'):
+                    # RandomForest or similar ensemble models
+                    for i, estimator in enumerate(model.estimators_):
+                        if hasattr(estimator, 'tree_'):
+                            tree = estimator.tree_
+                            # Remove monotonic_cst if it causes AttributeError
+                            if hasattr(tree, '__dict__') and 'monotonic_cst' in tree.__dict__:
+                                try:
+                                    # Try to access it to see if it works
+                                    _ = tree.monotonic_cst
+                                except AttributeError:
+                                    # If accessing causes error, remove it
+                                    del tree.__dict__['monotonic_cst']
+            
+            print(f"Model loaded from {filepath}")
+        except AttributeError as e:
+            if 'monotonic_cst' in str(e):
+                # Specific handling for monotonic_cst compatibility issue
+                print(f"Warning: Compatibility issue with monotonic_cst detected")
+                print(f"Error: {e}")
+                print(f"Current scikit-learn version: {sklearn.__version__}")
+                print("Attempting to fix by patching the model...")
+                
+                # Reload and patch
+                data = joblib.load(filepath)
+                self.models = data['models']
+                self.model_type = data['model_type']
+                self.feature_importance = data.get('feature_importance', {})
+                
+                # Patch all trees to remove problematic monotonic_cst
+                for model_name, model in self.models.items():
+                    if hasattr(model, 'estimators_'):
+                        for estimator in model.estimators_:
+                            if hasattr(estimator, 'tree_'):
+                                tree = estimator.tree_
+                                # Use setattr with a dummy value or delete from __dict__
+                                if hasattr(tree, '__dict__'):
+                                    tree.__dict__.pop('monotonic_cst', None)
+                                # Also try to set it to None if attribute exists
+                                try:
+                                    setattr(tree, 'monotonic_cst', None)
+                                except:
+                                    pass
+                
+                print(f"Model loaded from {filepath} (patched for compatibility)")
+            else:
+                raise
+        except Exception as e:
+            # Handle other compatibility issues
+            import traceback
+            print(f"Error loading model: {e}")
+            print("This may be due to scikit-learn version incompatibility.")
+            print(f"Current scikit-learn version: {sklearn.__version__}")
+            print("Solution: Please retrain the model with the current scikit-learn version.")
+            print("Run: python3 train_models.py")
+            traceback.print_exc()
+            raise
 
