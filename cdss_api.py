@@ -16,7 +16,14 @@ from drug_combination_analyzer import DrugCombinationAnalyzer
 from drug_side_effects import DrugSideEffects
 
 app = Flask(__name__)
-CORS(app)  # Enable cross-origin requests
+# Enable CORS with more permissive settings for better compatibility
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Global variables
 predictor = None
