@@ -825,6 +825,90 @@
             return interpretation;
         }
         
+        // Translate recommendation messages from backend
+        function translateRecommendation(recommendation) {
+            if (!recommendation) return '';
+            
+            // If current language is English or Chinese, return as is (backend returns English)
+            if (currentLanguage === 'en' || currentLanguage === 'zh') {
+                return recommendation;
+            }
+            
+            // Translate English recommendations to French
+            const translations = {
+                "⚠️ High risk: Patient's current drug combination has high risk, recommend re-evaluating medication regimen": {
+                    fr: "⚠️ Risque élevé: La combinaison actuelle de médicaments du patient présente un risque élevé, recommander de réévaluer le schéma posologique"
+                },
+                "🟡 Medium risk: Recommend closely monitoring patient condition, consider adjusting medication": {
+                    fr: "🟡 Risque moyen: Recommander de surveiller étroitement l'état du patient, envisager d'ajuster les médicaments"
+                },
+                "🔴 Found": {
+                    fr: "🔴 Trouvé"
+                },
+                " high-risk drug combination(s):": {
+                    fr: " combinaison(s) de médicaments à risque élevé:"
+                },
+                "✅ Found": {
+                    fr: "✅ Trouvé"
+                },
+                " effective drug combination(s):": {
+                    fr: " combinaison(s) de médicaments efficace(s):"
+                },
+                "Relative risk": {
+                    fr: "Risque relatif"
+                },
+                " (protective)": {
+                    fr: " (protecteur)"
+                }
+            };
+            
+            // Try exact match first
+            if (translations[recommendation]) {
+                return translations[recommendation][currentLanguage] || recommendation;
+            }
+            
+            // Try partial translation for messages with dynamic content
+            let translated = recommendation;
+            
+            // Translate "Found X high-risk drug combination(s):"
+            if (recommendation.includes("Found") && recommendation.includes("high-risk drug combination")) {
+                const match = recommendation.match(/Found (\d+) high-risk drug combination\(s\):/);
+                if (match) {
+                    translated = `🔴 Trouvé ${match[1]} combinaison(s) de médicaments à risque élevé:`;
+                }
+            }
+            
+            // Translate "Found X effective drug combination(s):"
+            if (recommendation.includes("Found") && recommendation.includes("effective drug combination")) {
+                const match = recommendation.match(/Found (\d+) effective drug combination\(s\):/);
+                if (match) {
+                    translated = `✅ Trouvé ${match[1]} combinaison(s) de médicaments efficace(s):`;
+                }
+            }
+            
+            // Translate "Relative risk X.XX"
+            if (recommendation.includes("Relative risk")) {
+                translated = translated.replace("Relative risk", "Risque relatif");
+            }
+            
+            // Translate " (protective)"
+            if (recommendation.includes(" (protective)")) {
+                translated = translated.replace(" (protective)", " (protecteur)");
+            }
+            
+            // Translate high risk message
+            if (recommendation.includes("⚠️ High risk: Patient's current drug combination has high risk")) {
+                translated = "⚠️ Risque élevé: La combinaison actuelle de médicaments du patient présente un risque élevé, recommander de réévaluer le schéma posologique";
+            }
+            
+            // Translate medium risk message
+            if (recommendation.includes("🟡 Medium risk: Recommend closely monitoring patient condition")) {
+                translated = "🟡 Risque moyen: Recommander de surveiller étroitement l'état du patient, envisager d'ajuster les médicaments";
+            }
+            
+            return translated;
+        }
+        
         // Switch language
         function switchLanguage(lang) {
             currentLanguage = lang;
@@ -1877,7 +1961,7 @@
                 recommendationsHtml += `
                     <h4>💡 ${t('clinicalRecommendations')}</h4>
                     <ul>
-                        ${analysis.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                        ${analysis.recommendations.map(rec => `<li>${translateRecommendation(rec)}</li>`).join('')}
                     </ul>
                 `;
             }
