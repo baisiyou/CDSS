@@ -123,6 +123,15 @@ def load_models():
         traceback.print_exc()
         print("Continuing to start service, but some features may be unavailable")
 
+@app.after_request
+def after_request(response):
+    """Add CORS headers to all responses"""
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    response.headers.add('Access-Control-Max-Age', '3600')
+    return response
+
 @app.route('/', methods=['GET'])
 def index():
     """API root path, returns API documentation"""
