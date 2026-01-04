@@ -971,23 +971,75 @@
             throw lastError || new Error('Request failed');
         }
         
+        // Check API service health before making requests
+        async function checkApiHealth() {
+            try {
+                const healthResponse = await fetchWithTimeout(
+                    `${API_BASE}/health`,
+                    {},
+                    10000, // 10 second timeout for health check
+                    0      // No retry for health check
+                );
+                
+                if (healthResponse.ok) {
+                    const healthData = await healthResponse.json();
+                    console.log('API health check successful:', healthData);
+                    return { available: true, data: healthData };
+                } else {
+                    console.warn('API health check failed:', healthResponse.status);
+                    return { available: false, status: healthResponse.status };
+                }
+            } catch (error) {
+                console.warn('API health check error:', error);
+                return { available: false, error: error.message };
+            }
+        }
+        
         // Load all drug list
         async function loadDrugs() {
             try {
                 console.log(`Connecting to API: ${API_BASE}`);
-                // Show startup hint on first attempt
+                
+                // First check API health
                 const loadingHint = document.getElementById('drugSearchHint');
                 if (loadingHint) {
-                    const originalText = loadingHint.textContent;
-                    loadingHint.textContent = t('serviceStarting');
+                    loadingHint.textContent = currentLanguage === 'zh' ? 
+                        '正在检查API服务状态...' : 
+                        currentLanguage === 'fr' ? 
+                        'Vérification de l\'état du service API...' :
+                        'Checking API service status...';
                     loadingHint.style.color = '#667eea';
+                }
+                
+                const healthCheck = await checkApiHealth();
+                
+                if (!healthCheck.available) {
+                    // Service may be sleeping, try to wake it up with a longer timeout
+                    console.log('API service may be sleeping, attempting to wake it up...');
+                    if (loadingHint) {
+                        loadingHint.textContent = currentLanguage === 'zh' ? 
+                            'API服务可能正在启动中，请稍候（最多可能需要30秒）...' : 
+                            currentLanguage === 'fr' ? 
+                            'Le service API peut être en cours de démarrage, veuillez patienter (jusqu\'à 30 secondes)...' :
+                            'API service may be starting up, please wait (may take up to 30 seconds)...';
+                        loadingHint.style.color = '#ff9800';
+                    }
+                } else {
+                    if (loadingHint) {
+                        loadingHint.textContent = currentLanguage === 'zh' ? 
+                            '正在加载药物列表...' : 
+                            currentLanguage === 'fr' ? 
+                            'Chargement de la liste des médicaments...' :
+                            'Loading drug list...';
+                        loadingHint.style.color = '#667eea';
+                    }
                 }
                 
                 const response = await fetchWithTimeout(
                     `${API_BASE}/drugs/list?limit=1000`,
                     {},
-                    45000, // 45 second timeout (Render free tier may need 30 seconds to start)
-                    1      // Maximum 1 retry (2 attempts total)
+                    60000, // 60 second timeout (Render free tier may need up to 30 seconds to wake up)
+                    2      // Maximum 2 retries (3 attempts total) for sleeping services
                 );
                 
                 const data = await response.json();
