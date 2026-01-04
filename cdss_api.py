@@ -360,10 +360,19 @@ def analyze_drug_combinations():
     try:
         data = request.json
         
-        if combination_analyzer is None or combination_analyzer.data is None:
+        if combination_analyzer is None:
             return jsonify({
-                'error': '药物组合分析系统未初始化，请确保数据文件存在'
-            }), 500
+                'success': False,
+                'error': '药物组合分析系统未初始化',
+                'message': '数据文件未加载，分析功能不可用（免费版内存限制，仅支持药物列表功能）'
+            }), 503  # 503 Service Unavailable 更合适
+        
+        if combination_analyzer.data is None:
+            return jsonify({
+                'success': False,
+                'error': '完整数据未加载',
+                'message': '由于内存限制，完整数据分析功能不可用。当前仅支持药物列表查询。如需完整功能，请升级到付费计划。'
+            }), 503  # 503 Service Unavailable
         
         # 将输入转换为DataFrame
         patient_data = pd.DataFrame([data])
@@ -402,10 +411,19 @@ def analyze_drug_combinations():
 def get_common_combinations():
     """获取常见药物组合"""
     try:
-        if combination_analyzer is None or combination_analyzer.data is None:
+        if combination_analyzer is None:
             return jsonify({
-                'error': '药物组合分析系统未初始化'
-            }), 500
+                'success': False,
+                'error': '药物组合分析系统未初始化',
+                'message': '数据文件未加载，此功能不可用'
+            }), 503
+        
+        if combination_analyzer.data is None:
+            return jsonify({
+                'success': False,
+                'error': '完整数据未加载',
+                'message': '由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+            }), 503
         
         min_support = float(request.args.get('min_support', 0.01))
         max_combinations = int(request.args.get('max_combinations', 50))
@@ -429,10 +447,19 @@ def get_common_combinations():
 def get_risky_combinations():
     """获取高风险药物组合"""
     try:
-        if combination_analyzer is None or combination_analyzer.data is None:
+        if combination_analyzer is None:
             return jsonify({
-                'error': '药物组合分析系统未初始化'
-            }), 500
+                'success': False,
+                'error': '药物组合分析系统未初始化',
+                'message': '数据文件未加载，此功能不可用'
+            }), 503
+        
+        if combination_analyzer.data is None:
+            return jsonify({
+                'success': False,
+                'error': '完整数据未加载',
+                'message': '由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+            }), 503
         
         outcome = request.args.get('outcome', 'death')
         min_risk_increase = float(request.args.get('min_risk_increase', 0.2))
@@ -458,10 +485,19 @@ def get_risky_combinations():
 def get_effective_combinations():
     """获取有效药物组合"""
     try:
-        if combination_analyzer is None or combination_analyzer.data is None:
+        if combination_analyzer is None:
             return jsonify({
-                'error': '药物组合分析系统未初始化'
-            }), 500
+                'success': False,
+                'error': '药物组合分析系统未初始化',
+                'message': '数据文件未加载，此功能不可用'
+            }), 503
+        
+        if combination_analyzer.data is None:
+            return jsonify({
+                'success': False,
+                'error': '完整数据未加载',
+                'message': '由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+            }), 503
         
         outcome = request.args.get('outcome', 'death')
         min_improvement = float(request.args.get('min_improvement', 0.1))
@@ -530,10 +566,19 @@ def get_drugs_list():
 def get_drug_protective_effects():
     """分析特定药物与其他药物联用时，可能降低哪些不良结局风险"""
     try:
-        if combination_analyzer is None or combination_analyzer.data is None:
+        if combination_analyzer is None:
             return jsonify({
-                'error': '药物组合分析系统未初始化'
-            }), 500
+                'success': False,
+                'error': '药物组合分析系统未初始化',
+                'message': '数据文件未加载，此功能不可用'
+            }), 503
+        
+        if combination_analyzer.data is None:
+            return jsonify({
+                'success': False,
+                'error': '完整数据未加载',
+                'message': '由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+            }), 503
         
         # 支持GET和POST请求
         if request.method == 'GET':
@@ -573,10 +618,19 @@ def get_drug_protective_effects():
 def get_drug_recommendations():
     """获取防止多器官功能障碍的推荐药物"""
     try:
-        if combination_analyzer is None or combination_analyzer.data is None:
+        if combination_analyzer is None:
             return jsonify({
-                'error': '药物组合分析系统未初始化'
-            }), 500
+                'success': False,
+                'error': '药物组合分析系统未初始化',
+                'message': '数据文件未加载，此功能不可用'
+            }), 503
+        
+        if combination_analyzer.data is None:
+            return jsonify({
+                'success': False,
+                'error': '完整数据未加载',
+                'message': '由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+            }), 503
         
         data = request.json
         current_drugs = data.get('drugs', [])
