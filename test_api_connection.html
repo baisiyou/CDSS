@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 API Connection Test Tool</h1>
+    
+    <div class="test-section">
+        <h2>API Configuration</h2>
+        <div id="apiConfig" class="status info">
+            <strong>API Base URL:</strong> <span id="apiUrl">Loading...</span>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Actions</h2>
+        <button onclick="testHealth()">Test Health Endpoint</button>
+        <button onclick="testDrugsList()">Test Drugs List</button>
+        <button onclick="testAll()">Test All Endpoints</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="results"></div>
+    </div>
+    
+    <script src="config.js"></script>
+    <script>
+        // Get API base URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const API_BASE = urlParams.get('api') || 
+                        (typeof window.API_BASE_URL !== 'undefined' ? window.API_BASE_URL : 'http://localhost:5003');
+        
+        document.getElementById('apiUrl').textContent = API_BASE;
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testHealth() {
+            clearResults();
+            addResult('Testing /health endpoint...', 'info');
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ Health check successful (${duration}ms)`, 'success');
+                    addResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'info');
+                } else {
+                    addResult(`❌ Health check failed: HTTP ${response.status}`, 'error');
+                    const text = await response.text();
+                    addResult(`Response: ${text}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Health check error: ${error.message}`, 'error');
+                addResult(`Error type: ${error.name}`, 'error');
+                
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    addResult('💡 This is a network error. Possible causes:', 'info');
+                    addResult('1. API service is not running or is sleeping (Render free tier)', 'info');
+                    addResult('2. CORS issue (check browser console)', 'info');
+                    addResult('3. Network connectivity problem', 'info');
+                    addResult(`4. Try visiting ${API_BASE}/health directly in your browser`, 'info');
+                }
+            }
+        }
+        
+        async function testDrugsList() {
+            clearResults();
+            addResult('Testing /drugs/list endpoint...', 'info');
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(`${API_BASE}/drugs/list?limit=10`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ Drugs list successful (${duration}ms)`, 'success');
+                    addResult(`Found ${data.drugs ? data.drugs.length : 0} drugs`, 'info');
+                    if (data.drugs && data.drugs.length > 0) {
+                        addResult(`Sample drugs: ${data.drugs.slice(0, 5).join(', ')}`, 'info');
+                    }
+                } else {
+                    addResult(`❌ Drugs list failed: HTTP ${response.status}`, 'error');
+                    const text = await response.text();
+                    addResult(`Response: ${text}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Drugs list error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAll() {
+            clearResults();
+            addResult('Testing all endpoints...', 'info');
+            
+            await testHealth();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testDrugsList();
+        }
+        
+        // Auto-test on load
+        window.addEventListener('load', function() {
+            setTimeout(testHealth, 1000);
+        });
+    </script>
+</body>
+</html>
+
