@@ -780,42 +780,52 @@
         function translateInterpretation(interpretation) {
             if (!interpretation) return '';
             
-            // If current language is Chinese or English, return as is (backend returns English)
-            if (currentLanguage === 'zh' || currentLanguage === 'en') {
+            // If current language is English, return as is (backend returns English)
+            if (currentLanguage === 'en') {
                 return interpretation;
             }
             
-            // Translate English interpretation to French (backend now returns English)
+            // Translate English interpretation to Chinese or French (backend now returns English)
             const translations = {
                 'High risk: This drug combination significantly increases adverse outcome risk': {
+                    zh: '高风险：该药物组合显著增加不良结局风险',
                     fr: 'Risque Élevé: Cette combinaison de médicaments augmente significativement le risque d\'issue défavorable'
                 },
                 'Medium risk: This drug combination may increase adverse outcome risk': {
+                    zh: '中等风险：该药物组合可能增加不良结局风险',
                     fr: 'Risque Moyen: Cette combinaison de médicaments peut augmenter le risque d\'issue défavorable'
                 },
                 'Protective: This drug combination may reduce adverse outcome risk': {
+                    zh: '保护性：该药物组合可能降低不良结局风险',
                     fr: 'Protecteur: Cette combinaison de médicaments peut réduire le risque d\'issue défavorable'
                 },
                 'Possibly protective: This drug combination may slightly reduce adverse outcome risk': {
+                    zh: '可能保护性：该药物组合可能略微降低不良结局风险',
                     fr: 'Potentiellement Protecteur: Cette combinaison de médicaments peut légèrement réduire le risque d\'issue défavorable'
                 },
                 'Neutral: This drug combination has no significant effect on outcome': {
+                    zh: '中性：该药物组合对结局影响不明显',
                     fr: 'Neutre: Cette combinaison de médicaments n\'a pas d\'effet significatif sur les issues'
                 },
                 // Legacy Chinese translations (for backward compatibility)
                 '高风险：该药物组合显著增加不良结局风险': {
+                    zh: '高风险：该药物组合显著增加不良结局风险',
                     fr: 'Risque Élevé: Cette combinaison de médicaments augmente significativement le risque d\'issue défavorable'
                 },
                 '中等风险：该药物组合可能增加不良结局风险': {
+                    zh: '中等风险：该药物组合可能增加不良结局风险',
                     fr: 'Risque Moyen: Cette combinaison de médicaments peut augmenter le risque d\'issue défavorable'
                 },
                 '保护性：该药物组合可能降低不良结局风险': {
+                    zh: '保护性：该药物组合可能降低不良结局风险',
                     fr: 'Protecteur: Cette combinaison de médicaments peut réduire le risque d\'issue défavorable'
                 },
                 '可能保护性：该药物组合可能略微降低不良结局风险': {
+                    zh: '可能保护性：该药物组合可能略微降低不良结局风险',
                     fr: 'Potentiellement Protecteur: Cette combinaison de médicaments peut légèrement réduire le risque d\'issue défavorable'
                 },
                 '中性：该药物组合对结局影响不明显': {
+                    zh: '中性：该药物组合对结局影响不明显',
                     fr: 'Neutre: Cette combinaison de médicaments n\'a pas d\'effet significatif sur les issues'
                 }
             };
@@ -827,19 +837,39 @@
             
             // Partial match for English messages
             if (interpretation.includes('High risk:')) {
-                return 'Risque Élevé: Cette combinaison de médicaments augmente significativement le risque d\'issue défavorable';
+                if (currentLanguage === 'zh') {
+                    return '高风险：该药物组合显著增加不良结局风险';
+                } else if (currentLanguage === 'fr') {
+                    return 'Risque Élevé: Cette combinaison de médicaments augmente significativement le risque d\'issue défavorable';
+                }
             }
             if (interpretation.includes('Medium risk:')) {
-                return 'Risque Moyen: Cette combinaison de médicaments peut augmenter le risque d\'issue défavorable';
+                if (currentLanguage === 'zh') {
+                    return '中等风险：该药物组合可能增加不良结局风险';
+                } else if (currentLanguage === 'fr') {
+                    return 'Risque Moyen: Cette combinaison de médicaments peut augmenter le risque d\'issue défavorable';
+                }
             }
             if (interpretation.includes('Protective:')) {
-                return 'Protecteur: Cette combinaison de médicaments peut réduire le risque d\'issue défavorable';
+                if (currentLanguage === 'zh') {
+                    return '保护性：该药物组合可能降低不良结局风险';
+                } else if (currentLanguage === 'fr') {
+                    return 'Protecteur: Cette combinaison de médicaments peut réduire le risque d\'issue défavorable';
+                }
             }
             if (interpretation.includes('Possibly protective:')) {
-                return 'Potentiellement Protecteur: Cette combinaison de médicaments peut légèrement réduire le risque d\'issue défavorable';
+                if (currentLanguage === 'zh') {
+                    return '可能保护性：该药物组合可能略微降低不良结局风险';
+                } else if (currentLanguage === 'fr') {
+                    return 'Potentiellement Protecteur: Cette combinaison de médicaments peut légèrement réduire le risque d\'issue défavorable';
+                }
             }
             if (interpretation.includes('Neutral:')) {
-                return 'Neutre: Cette combinaison de médicaments n\'a pas d\'effet significatif sur les issues';
+                if (currentLanguage === 'zh') {
+                    return '中性：该药物组合对结局影响不明显';
+                } else if (currentLanguage === 'fr') {
+                    return 'Neutre: Cette combinaison de médicaments n\'a pas d\'effet significatif sur les issues';
+                }
             }
             
             // Partial match (handle possible variants) - legacy Chinese support
@@ -857,36 +887,20 @@
         function translateRecommendation(recommendation) {
             if (!recommendation) return '';
             
-            // If current language is English or Chinese, return as is (backend returns English)
-            if (currentLanguage === 'en' || currentLanguage === 'zh') {
+            // If current language is English, return as is (backend returns English)
+            if (currentLanguage === 'en') {
                 return recommendation;
             }
             
-            // Translate English recommendations to French
+            // Translate English recommendations to Chinese or French
             const translations = {
                 "⚠️ High risk: Patient's current drug combination has high risk, recommend re-evaluating medication regimen": {
+                    zh: "⚠️ 高风险：患者当前药物组合存在高风险，建议重新评估用药方案",
                     fr: "⚠️ Risque élevé: La combinaison actuelle de médicaments du patient présente un risque élevé, recommander de réévaluer le schéma posologique"
                 },
                 "🟡 Medium risk: Recommend closely monitoring patient condition, consider adjusting medication": {
+                    zh: "🟡 中等风险：建议密切监测患者状况，考虑调整用药",
                     fr: "🟡 Risque moyen: Recommander de surveiller étroitement l'état du patient, envisager d'ajuster les médicaments"
-                },
-                "🔴 Found": {
-                    fr: "🔴 Trouvé"
-                },
-                " high-risk drug combination(s):": {
-                    fr: " combinaison(s) de médicaments à risque élevé:"
-                },
-                "✅ Found": {
-                    fr: "✅ Trouvé"
-                },
-                " effective drug combination(s):": {
-                    fr: " combinaison(s) de médicaments efficace(s):"
-                },
-                "Relative risk": {
-                    fr: "Risque relatif"
-                },
-                " (protective)": {
-                    fr: " (protecteur)"
                 }
             };
             
@@ -902,7 +916,11 @@
             if (recommendation.includes("Found") && recommendation.includes("high-risk drug combination")) {
                 const match = recommendation.match(/Found (\d+) high-risk drug combination\(s\):/);
                 if (match) {
-                    translated = `🔴 Trouvé ${match[1]} combinaison(s) de médicaments à risque élevé:`;
+                    if (currentLanguage === 'zh') {
+                        translated = `🔴 发现 ${match[1]} 个高风险药物组合：`;
+                    } else if (currentLanguage === 'fr') {
+                        translated = `🔴 Trouvé ${match[1]} combinaison(s) de médicaments à risque élevé:`;
+                    }
                 }
             }
             
@@ -910,28 +928,48 @@
             if (recommendation.includes("Found") && recommendation.includes("effective drug combination")) {
                 const match = recommendation.match(/Found (\d+) effective drug combination\(s\):/);
                 if (match) {
-                    translated = `✅ Trouvé ${match[1]} combinaison(s) de médicaments efficace(s):`;
+                    if (currentLanguage === 'zh') {
+                        translated = `✅ 发现 ${match[1]} 个有效药物组合：`;
+                    } else if (currentLanguage === 'fr') {
+                        translated = `✅ Trouvé ${match[1]} combinaison(s) de médicaments efficace(s):`;
+                    }
                 }
             }
             
             // Translate "Relative risk X.XX"
             if (recommendation.includes("Relative risk")) {
-                translated = translated.replace("Relative risk", "Risque relatif");
+                if (currentLanguage === 'zh') {
+                    translated = translated.replace("Relative risk", "相对风险");
+                } else if (currentLanguage === 'fr') {
+                    translated = translated.replace("Relative risk", "Risque relatif");
+                }
             }
             
             // Translate " (protective)"
             if (recommendation.includes(" (protective)")) {
-                translated = translated.replace(" (protective)", " (protecteur)");
+                if (currentLanguage === 'zh') {
+                    translated = translated.replace(" (protective)", "（保护性）");
+                } else if (currentLanguage === 'fr') {
+                    translated = translated.replace(" (protective)", " (protecteur)");
+                }
             }
             
             // Translate high risk message
             if (recommendation.includes("⚠️ High risk: Patient's current drug combination has high risk")) {
-                translated = "⚠️ Risque élevé: La combinaison actuelle de médicaments du patient présente un risque élevé, recommander de réévaluer le schéma posologique";
+                if (currentLanguage === 'zh') {
+                    translated = "⚠️ 高风险：患者当前药物组合存在高风险，建议重新评估用药方案";
+                } else if (currentLanguage === 'fr') {
+                    translated = "⚠️ Risque élevé: La combinaison actuelle de médicaments du patient présente un risque élevé, recommander de réévaluer le schéma posologique";
+                }
             }
             
             // Translate medium risk message
             if (recommendation.includes("🟡 Medium risk: Recommend closely monitoring patient condition")) {
-                translated = "🟡 Risque moyen: Recommander de surveiller étroitement l'état du patient, envisager d'ajuster les médicaments";
+                if (currentLanguage === 'zh') {
+                    translated = "🟡 中等风险：建议密切监测患者状况，考虑调整用药";
+                } else if (currentLanguage === 'fr') {
+                    translated = "🟡 Risque moyen: Recommander de surveiller étroitement l'état du patient, envisager d'ajuster les médicaments";
+                }
             }
             
             return translated;
