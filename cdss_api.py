@@ -16,10 +16,16 @@ from drug_combination_analyzer import DrugCombinationAnalyzer
 from drug_side_effects import DrugSideEffects
 
 app = Flask(__name__)
-# Enable CORS - allow all origins
-# Note: We use CORS(app) which handles all CORS headers automatically
-# Do NOT add CORS headers in after_request hook to avoid duplicate headers
-CORS(app)
+# Enable CORS - allow all origins and handle preflight requests
+# CORS(app) automatically handles OPTIONS preflight requests
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+        "supports_credentials": False
+    }
+})
 
 # Global variables
 predictor = None
