@@ -892,10 +892,15 @@ def get_drug_side_effects():
         for drug_name in drug_list:
             drug_info = side_effects_db.get_side_effects(drug_name)
             if drug_info:
+                # drug_info is a dict with keys: side_effects, organ_toxicity, monitoring, contraindications, precautions
                 results.append({
                     'drug': drug_name,
                     'found': True,
-                    **drug_info
+                    'side_effects': drug_info.get('side_effects', []),
+                    'organ_toxicity': drug_info.get('organ_toxicity', {}),
+                    'monitoring': drug_info.get('monitoring', []),
+                    'contraindications': drug_info.get('contraindications', []),
+                    'precautions': drug_info.get('precautions', '')
                 })
             else:
                 results.append({
