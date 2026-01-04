@@ -1,6 +1,6 @@
 """
-临床决策支持系统 API
-提供预测和预警服务的Flask API
+Clinical Decision Support System API
+Flask API providing prediction and warning services
 """
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -15,16 +15,16 @@ from drug_interaction_warning import DrugInteractionWarning
 from drug_combination_analyzer import DrugCombinationAnalyzer
 
 app = Flask(__name__)
-CORS(app)  # 允许跨域请求
+CORS(app)  # Enable cross-origin requests
 
-# 全局变量
+# Global variables
 predictor = None
 preprocessor = None
 warning_system = None
 combination_analyzer = None
 
 def load_models():
-    """加载模型和预处理器"""
+    """Load models and preprocessor"""
     global predictor, preprocessor, warning_system, combination_analyzer
     
     try:
@@ -36,97 +36,97 @@ def load_models():
             try:
                 predictor = OrganFunctionPredictor()
                 predictor.load(model_path)
-                print("模型加载成功")
+                print("Model loaded successfully")
                 if hasattr(predictor, 'models') and predictor.models:
-                    print(f"  已加载模型: {list(predictor.models.keys())}")
+                    print(f"  Loaded models: {list(predictor.models.keys())}")
                 else:
-                    print("  警告：模型对象为空")
+                    print("  Warning: Model object is empty")
             except Exception as e:
-                print(f"  错误：模型加载失败: {e}")
+                print(f"  Error: Model loading failed: {e}")
                 import traceback
                 traceback.print_exc()
                 predictor = None
         else:
-            print("警告：模型文件不存在，请先运行 train_models.py")
+            print("Warning: Model file does not exist, please run train_models.py first")
         
         if os.path.exists(preprocessor_path):
             preprocessor = joblib.load(preprocessor_path)
-            print("预处理器加载成功")
+            print("Preprocessor loaded successfully")
         else:
-            print("警告：预处理器文件不存在")
+            print("Warning: Preprocessor file does not exist")
         
         warning_system = DrugInteractionWarning()
-        print("药物预警系统初始化成功")
+        print("Drug interaction warning system initialized successfully")
         
-        # 初始化药物组合分析器
-        # 优先使用模型文件（轻量级），如果不存在则使用原始数据文件
+        # Initialize drug combination analyzer
+        # Prefer model file (lightweight), fallback to original data file if not available
         combination_analyzer = DrugCombinationAnalyzer()
         model_path = 'models/drug_combination_model.pkl'
         data_path = 'eicu_mimic_lab_time.csv'
         
-        # 优先尝试加载模型文件
+        # Try to load model file first
         if os.path.exists(model_path):
             try:
-                print("正在加载药物组合模型（预计算数据）...")
+                print("Loading drug combination model (pre-computed data)...")
                 combination_analyzer.load_model(model_path)
-                print("药物组合分析系统初始化成功（使用预计算模型，内存占用低）")
+                print("Drug combination analysis system initialized successfully (using pre-computed model, low memory usage)")
             except Exception as e:
-                print(f"警告：模型加载失败: {e}")
-                print("尝试使用原始数据文件...")
+                print(f"Warning: Model loading failed: {e}")
+                print("Attempting to use original data file...")
                 import traceback
                 traceback.print_exc()
-                # 如果模型加载失败，尝试使用原始数据
+                # If model loading fails, try using original data
                 model_path = None
         
-        # 如果模型不存在或加载失败，使用原始数据文件
+        # If model doesn't exist or loading failed, use original data file
         if model_path is None or not os.path.exists(model_path):
             if os.path.exists(data_path):
                 try:
-                    # 通过环境变量控制是否加载完整数据
-                    # LOAD_FULL_DATA=true 时加载完整数据（需要更多内存，可能超过免费版512MB限制）
-                    # 默认只加载列名（节省内存）
+                    # Control whether to load full data via environment variable
+                    # LOAD_FULL_DATA=true loads full data (requires more memory, may exceed free tier 512MB limit)
+                    # Default: only load column names (saves memory)
                     load_full_data = os.environ.get('LOAD_FULL_DATA', 'false').lower() == 'true'
                     
                     if load_full_data:
-                        print("正在加载完整数据（这可能需要一些时间和内存）...")
+                        print("Loading full data (this may take some time and memory)...")
                         combination_analyzer.load_data(data_path, load_full_data=True)
-                        print("药物组合分析系统初始化成功（完整数据已加载）")
+                        print("Drug combination analysis system initialized successfully (full data loaded)")
                     else:
-                        # 只读取列名，不加载完整数据（节省内存，适用于免费版512MB限制）
-                        print("正在读取药物列表（仅列名，不加载完整数据以节省内存）...")
+                        # Only read column names, don't load full data (saves memory, suitable for free tier 512MB limit)
+                        print("Reading drug list (column names only, not loading full data to save memory)...")
                         combination_analyzer.load_data(data_path, load_full_data=False)
-                        print("药物列表加载成功（完整数据分析功能不可用，但药物列表可用）")
+                        print("Drug list loaded successfully (full data analysis unavailable, but drug list is available)")
                 except Exception as e:
-                    print(f"警告：数据加载失败: {e}")
-                    print("如果内存不足，可以设置环境变量 LOAD_FULL_DATA=false 来只加载列名")
-                    print("药物组合分析功能将不可用，但其他功能正常")
+                    print(f"Warning: Data loading failed: {e}")
+                    print("If memory is insufficient, set environment variable LOAD_FULL_DATA=false to only load column names")
+                    print("Drug combination analysis will be unavailable, but other features will work normally")
                     import traceback
                     traceback.print_exc()
             else:
-                print("警告：模型文件和数据文件都不存在，药物组合分析功能将不可用")
+                print("Warning: Both model file and data file do not exist, drug combination analysis will be unavailable")
     except Exception as e:
-        print(f"错误：加载模型时发生异常: {e}")
+        print(f"Error: Exception occurred while loading models: {e}")
         import traceback
         traceback.print_exc()
-        print("继续启动服务，但某些功能可能不可用")
+        print("Continuing to start service, but some features may be unavailable")
 
 @app.route('/', methods=['GET'])
 def index():
-    """API根路径，返回API文档"""
+    """API root path, returns API documentation"""
     return jsonify({
-        'name': '临床决策支持系统 (CDSS) API',
+        'name': 'Clinical Decision Support System (CDSS) API',
         'version': '1.0.0',
-        'description': '辅助医生判断用药调整、预测不良反应、推荐治疗方案',
+        'description': 'Assist physicians in medication adjustment decisions, predict adverse reactions, and recommend treatment plans',
         'endpoints': {
-            'GET /': 'API文档（当前页面）',
-            'GET /health': '健康检查',
-            'POST /predict': '预测肝肾功能异常',
-            'POST /warn': '药物组合风险预警',
-            'POST /analyze': '综合分析（预测+预警）',
-            'POST /drug_combinations': '分析患者药物组合',
-            'GET /drug_combinations/common': '获取常见药物组合',
-            'GET /drug_combinations/risky': '获取高风险药物组合',
-            'GET /drug_combinations/effective': '获取有效药物组合'
+            'GET /': 'API documentation (current page)',
+            'GET /health': 'Health check',
+            'POST /predict': 'Predict kidney and liver function abnormalities',
+            'POST /warn': 'Drug combination risk warning',
+            'POST /analyze': 'Comprehensive analysis (prediction + warning)',
+            'POST /drug_combinations': 'Analyze patient drug combinations',
+            'GET /drug_combinations/common': 'Get common drug combinations',
+            'GET /drug_combinations/risky': 'Get high-risk drug combinations',
+            'GET /drug_combinations/effective': 'Get effective drug combinations'
         },
         'usage': {
             'predict': {
@@ -154,22 +154,22 @@ def index():
                 'method': 'POST',
                 'url': '/analyze',
                 'content_type': 'application/json',
-                'description': '综合分析，包含预测和预警'
+                'description': 'Comprehensive analysis, includes prediction and warning'
             }
         },
-        'web_interface': '打开 web_interface.html 文件使用Web界面',
-        'documentation': '查看 README.md 获取完整文档'
+        'web_interface': 'Open web_interface.html file to use the web interface',
+        'documentation': 'See README.md for complete documentation'
     })
 
 @app.route('/favicon.ico', methods=['GET'])
 def favicon():
-    """处理favicon请求"""
-    return '', 204  # 返回空响应，避免404错误
+    """Handle favicon requests"""
+    return '', 204  # Return empty response to avoid 404 error
 
 @app.route('/health', methods=['GET'])
 def health():
-    """健康检查"""
-    # 检查组合分析器状态
+    """Health check"""
+    # Check combination analyzer status
     combination_status = 'not_initialized'
     if combination_analyzer is not None:
         has_data = combination_analyzer.data is not None
@@ -192,35 +192,35 @@ def health():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    """预测肝肾功能异常"""
+    """Predict kidney and liver function abnormalities"""
     try:
         data = request.json
         
         if predictor is None:
             return jsonify({
-                'error': '预测模型未加载，请先运行 train_models.py 训练模型',
+                'error': 'Prediction model not loaded, please run train_models.py to train the model first',
                 'model_status': 'not_loaded'
             }), 500
         
         if preprocessor is None:
             return jsonify({
-                'error': '预处理器未加载，请先运行 train_models.py 训练模型',
+                'error': 'Preprocessor not loaded, please run train_models.py to train the model first',
                 'preprocessor_status': 'not_loaded'
             }), 500
         
-        # 检查模型是否有效
+        # Check if model is valid
         if not hasattr(predictor, 'models') or not predictor.models:
             return jsonify({
-                'error': '模型对象无效，请重新训练模型',
+                'error': 'Model object is invalid, please retrain the model',
                 'model_status': 'invalid'
             }), 500
         
-        # 将输入转换为DataFrame
+        # Convert input to DataFrame
         patient_data = pd.DataFrame([data])
         
-        # 确保所有特征列都存在，并按照训练时的顺序排列
+        # Ensure all feature columns exist and are arranged in the same order as during training
         if hasattr(preprocessor, 'feature_columns') and preprocessor.feature_columns:
-            # 创建完整的特征DataFrame，缺失的列填充为0
+            # Create complete feature DataFrame, fill missing columns with 0
             feature_dict = {}
             for col in preprocessor.feature_columns:
                 if col in patient_data.columns:
@@ -228,28 +228,28 @@ def predict():
                 else:
                     feature_dict[col] = 0
             
-            # 按照feature_columns的顺序创建DataFrame
+            # Create DataFrame in the order of feature_columns
             X = pd.DataFrame([feature_dict])[preprocessor.feature_columns]
         else:
-            # 如果没有feature_columns，使用extract_features方法
+            # If no feature_columns, use extract_features method
             X = preprocessor.extract_features(patient_data)
         
         X = X.fillna(0)
         
-        # 标准化（使用scaler的transform方法）
-        # 预处理器在训练时已经fit过scaler，这里只需要transform
+        # Standardize (using scaler's transform method)
+        # Preprocessor has already fit the scaler during training, only transform is needed here
         X_scaled = preprocessor.scaler.transform(X)
         
-        # 预测
+        # Predict
         results = predictor.predict_all(X_scaled[0:1])
         
-        # 格式化结果
+        # Format results
         predictions = {}
         for target, result in results.items():
             pred_value = result['prediction']
             prob_value = result['probability']
             
-            # 处理numpy数组
+            # Handle numpy arrays
             if hasattr(pred_value, '__len__') and not isinstance(pred_value, str):
                 pred_value = int(pred_value[0]) if len(pred_value) > 0 else 0
             else:
@@ -278,38 +278,38 @@ def predict():
 
 @app.route('/warn', methods=['POST'])
 def warn():
-    """药物组合风险预警"""
+    """Drug combination risk warning"""
     try:
         data = request.json
         
         if warning_system is None:
             return jsonify({
-                'error': '预警系统未初始化'
+                'error': 'Warning system not initialized'
             }), 500
         
-        # 获取药物列和实验室指标列
+        # Get drug columns and lab indicator columns
         patient_data = pd.DataFrame([data])
         
-        # 从预处理器获取所有特征列
+        # Get all feature columns from preprocessor
         if preprocessor is not None:
             all_features = preprocessor.feature_columns
         else:
-            # 如果没有预处理器，从数据中推断
+            # If no preprocessor, infer from data
             all_features = list(data.keys())
         
-        # 分离药物列和实验室指标列
+        # Separate drug columns and lab indicator columns
         lab_columns = ['o2sat', 'pao2', 'paco2', 'ph', 'albu_lab', 'bands', 
                       'bun', 'hct', 'inr', 'lactate', 'platelets', 'wbc']
         drug_columns = [col for col in all_features if col not in lab_columns]
         
-        # 生成预警
+        # Generate warning
         warning_result = warning_system.generate_warning(
             patient_data, 
             drug_columns, 
             lab_columns
         )
         
-        # 转换为可序列化的格式
+        # Convert to serializable format
         result = {
             'overall_risk': warning_result['overall_risk'],
             'risk_score': warning_result['risk_score'],
@@ -340,21 +340,21 @@ def warn():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    """综合分析：预测 + 预警"""
+    """Comprehensive analysis: prediction + warning"""
     try:
         data = request.json
         
-        # 预测
+        # Predict
         predict_response = predict()
         if predict_response[1] != 200:
             return predict_response
         
-        # 预警
+        # Warn
         warn_response = warn()
         if warn_response[1] != 200:
             return warn_response
         
-        # 合并结果
+        # Merge results
         predict_data = predict_response[0].get_json()
         warn_data = warn_response[0].get_json()
         
@@ -372,66 +372,66 @@ def analyze():
         }), 500
 
 def _generate_summary(predictions, warning):
-    """生成综合摘要"""
+    """Generate comprehensive summary"""
     summary = []
     
-    # 预测结果摘要
+    # Prediction results summary
     if predictions:
         for target, result in predictions.items():
             if result.get('prediction') == 1:
                 prob = result.get('probability', 0)
-                summary.append(f"⚠️ 预测{target}异常 (概率: {prob:.2%})")
+                summary.append(f"⚠️ Predicted {target} abnormality (probability: {prob:.2%})")
     
-    # 预警摘要
+    # Warning summary
     if warning:
         risk_level = warning.get('overall_risk', 'unknown')
         if risk_level == 'high':
-            summary.append("🔴 高风险：药物组合存在高风险")
+            summary.append("🔴 High risk: Drug combination has high risk")
         elif risk_level == 'medium':
-            summary.append("🟡 中等风险：建议密切监测")
+            summary.append("🟡 Medium risk: Recommend close monitoring")
         
         if warning.get('lab_abnormal_count', 0) > 0:
-            summary.append(f"🔬 {warning['lab_abnormal_count']} 项实验室指标异常")
+            summary.append(f"🔬 {warning['lab_abnormal_count']} lab indicators abnormal")
     
     if not summary:
-        summary.append("✅ 当前状态良好，继续监测")
+        summary.append("✅ Current status is good, continue monitoring")
     
     return summary
 
 @app.route('/drug_combinations', methods=['POST'])
 def analyze_drug_combinations():
-    """分析患者药物组合"""
+    """Analyze patient drug combinations"""
     try:
         data = request.json
         
         if combination_analyzer is None:
             return jsonify({
                 'success': False,
-                'error': '药物组合分析系统未初始化',
-                'message': '数据文件未加载，分析功能不可用（免费版内存限制，仅支持药物列表功能）'
-            }), 503  # 503 Service Unavailable 更合适
+                'error': 'Drug combination analysis system not initialized',
+                'message': 'Data file not loaded, analysis feature unavailable (free tier memory limit, only drug list feature supported)'
+            }), 503  # 503 Service Unavailable is more appropriate
         
-        # 检查是否有可用的数据源（完整数据或预计算模型）
+        # Check if data source is available (full data or pre-computed model)
         has_data = combination_analyzer.data is not None
         has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
         
         if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '数据未加载',
-                'message': '完整数据和预计算模型都未加载。由于内存限制，完整数据分析功能不可用。当前仅支持药物列表查询。如需完整功能，请升级到付费计划或确保预计算模型文件存在。'
+                'error': 'Data not loaded',
+                'message': 'Both full data and pre-computed model are not loaded. Due to memory limitations, full data analysis is unavailable. Currently only drug list queries are supported. For full functionality, please upgrade to a paid plan or ensure the pre-computed model file exists.'
             }), 503  # 503 Service Unavailable
         
-        # 将输入转换为DataFrame
+        # Convert input to DataFrame
         patient_data = pd.DataFrame([data])
         
-        # 获取结局变量（默认为death）
+        # Get outcome variable (default: death)
         outcome = request.json.get('outcome', 'death')
         
-        # 分析药物组合
+        # Analyze drug combinations
         result = combination_analyzer.analyze_patient_combination(patient_data, outcome)
         
-        # 转换为可序列化的格式
+        # Convert to serializable format
         serializable_result = {
             'patient_drugs': result.get('patient_drugs', []),
             'total_drugs': result.get('total_drugs', 0),
@@ -457,24 +457,24 @@ def analyze_drug_combinations():
 
 @app.route('/drug_combinations/common', methods=['GET'])
 def get_common_combinations():
-    """获取常见药物组合"""
+    """Get common drug combinations"""
     try:
         if combination_analyzer is None:
             return jsonify({
                 'success': False,
-                'error': '药物组合分析系统未初始化',
-                'message': '数据文件未加载，此功能不可用'
+                'error': 'Drug combination analysis system not initialized',
+                'message': 'Data file not loaded, this feature is unavailable'
             }), 503
         
-        # 检查是否有可用的数据源
+        # Check if data source is available
         has_data = combination_analyzer.data is not None
         has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
         
         if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '数据未加载',
-                'message': '完整数据和预计算模型都未加载。由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+                'error': 'Data not loaded',
+                'message': 'Both full data and pre-computed model are not loaded. Due to memory limitations, this feature is unavailable. Currently only drug list queries are supported.'
             }), 503
         
         min_support = float(request.args.get('min_support', 0.01))
@@ -497,24 +497,24 @@ def get_common_combinations():
 
 @app.route('/drug_combinations/risky', methods=['GET'])
 def get_risky_combinations():
-    """获取高风险药物组合"""
+    """Get high-risk drug combinations"""
     try:
         if combination_analyzer is None:
             return jsonify({
                 'success': False,
-                'error': '药物组合分析系统未初始化',
-                'message': '数据文件未加载，此功能不可用'
+                'error': 'Drug combination analysis system not initialized',
+                'message': 'Data file not loaded, this feature is unavailable'
             }), 503
         
-        # 检查是否有可用的数据源
+        # Check if data source is available
         has_data = combination_analyzer.data is not None
         has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
         
         if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '数据未加载',
-                'message': '完整数据和预计算模型都未加载。由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+                'error': 'Data not loaded',
+                'message': 'Both full data and pre-computed model are not loaded. Due to memory limitations, this feature is unavailable. Currently only drug list queries are supported.'
             }), 503
         
         outcome = request.args.get('outcome', 'death')
@@ -539,24 +539,24 @@ def get_risky_combinations():
 
 @app.route('/drug_combinations/effective', methods=['GET'])
 def get_effective_combinations():
-    """获取有效药物组合"""
+    """Get effective drug combinations"""
     try:
         if combination_analyzer is None:
             return jsonify({
                 'success': False,
-                'error': '药物组合分析系统未初始化',
-                'message': '数据文件未加载，此功能不可用'
+                'error': 'Drug combination analysis system not initialized',
+                'message': 'Data file not loaded, this feature is unavailable'
             }), 503
         
-        # 检查是否有可用的数据源
+        # Check if data source is available
         has_data = combination_analyzer.data is not None
         has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
         
         if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '数据未加载',
-                'message': '完整数据和预计算模型都未加载。由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+                'error': 'Data not loaded',
+                'message': 'Both full data and pre-computed model are not loaded. Due to memory limitations, this feature is unavailable. Currently only drug list queries are supported.'
             }), 503
         
         outcome = request.args.get('outcome', 'death')
@@ -581,16 +581,16 @@ def get_effective_combinations():
 
 @app.route('/drugs/list', methods=['GET'])
 def get_drugs_list():
-    """获取所有可用药物列表"""
+    """Get all available drug list"""
     try:
-        # 如果数据未加载，返回空列表（而不是500错误）
+        # If data is not loaded, return empty list (instead of 500 error)
         if combination_analyzer is None or combination_analyzer.drug_columns is None:
             return jsonify({
                 'success': True,
                 'drugs': [],
                 'total': 0,
                 'filtered': 0,
-                'warning': '药物组合分析系统未初始化，数据文件可能未加载'
+                'warning': 'Drug combination analysis system not initialized, data file may not be loaded'
             })
         
         search = request.args.get('search', '').lower()
@@ -598,11 +598,11 @@ def get_drugs_list():
         
         drugs = combination_analyzer.drug_columns
         
-        # 搜索过滤
+        # Search filter
         if search:
             drugs = [d for d in drugs if search in d.lower()]
         
-        # 限制数量
+        # Limit count
         drugs = sorted(drugs)[:limit]
         
         return jsonify({
@@ -613,7 +613,7 @@ def get_drugs_list():
         })
     
     except Exception as e:
-        # 即使出错也返回200，但包含错误信息
+        # Return 200 even on error, but include error information
         return jsonify({
             'success': False,
             'drugs': [],
@@ -624,27 +624,27 @@ def get_drugs_list():
 
 @app.route('/drugs/protective-effects', methods=['GET', 'POST'])
 def get_drug_protective_effects():
-    """分析特定药物与其他药物联用时，可能降低哪些不良结局风险"""
+    """Analyze which adverse outcome risks may be reduced when a specific drug is combined with other drugs"""
     try:
         if combination_analyzer is None:
             return jsonify({
                 'success': False,
-                'error': '药物组合分析系统未初始化',
-                'message': '数据文件未加载，此功能不可用'
+                'error': 'Drug combination analysis system not initialized',
+                'message': 'Data file not loaded, this feature is unavailable'
             }), 503
         
-        # 检查是否有可用的数据源
+        # Check if data source is available
         has_data = combination_analyzer.data is not None
         has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
         
         if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '数据未加载',
-                'message': '完整数据和预计算模型都未加载。由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+                'error': 'Data not loaded',
+                'message': 'Both full data and pre-computed model are not loaded. Due to memory limitations, this feature is unavailable. Currently only drug list queries are supported.'
             }), 503
         
-        # 支持GET和POST请求
+        # Support both GET and POST requests
         if request.method == 'GET':
             drug_name = request.args.get('drug', '')
         else:
@@ -653,7 +653,7 @@ def get_drug_protective_effects():
         
         if not drug_name:
             return jsonify({
-                'error': '请提供药物名称（drug参数）'
+                'error': 'Please provide drug name (drug parameter)'
             }), 400
         
         min_risk_reduction = float(request.args.get('min_risk_reduction', 0.05) if request.method == 'GET' else data.get('min_risk_reduction', 0.05))
@@ -680,24 +680,24 @@ def get_drug_protective_effects():
 
 @app.route('/drugs/recommend', methods=['POST'])
 def get_drug_recommendations():
-    """获取防止多器官功能障碍的推荐药物"""
+    """Get recommended drugs to prevent multi-organ dysfunction"""
     try:
         if combination_analyzer is None:
             return jsonify({
                 'success': False,
-                'error': '药物组合分析系统未初始化',
-                'message': '数据文件未加载，此功能不可用'
+                'error': 'Drug combination analysis system not initialized',
+                'message': 'Data file not loaded, this feature is unavailable'
             }), 503
         
-        # 检查是否有可用的数据源
+        # Check if data source is available
         has_data = combination_analyzer.data is not None
         has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
         
         if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '数据未加载',
-                'message': '完整数据和预计算模型都未加载。由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+                'error': 'Data not loaded',
+                'message': 'Both full data and pre-computed model are not loaded. Due to memory limitations, this feature is unavailable. Currently only drug list queries are supported.'
             }), 503
         
         data = request.json
@@ -705,29 +705,29 @@ def get_drug_recommendations():
         
         if not current_drugs:
             return jsonify({
-                'error': '请提供当前使用的药物列表'
+                'error': 'Please provide current drug list'
             }), 400
         
-        # 获取推荐药物（针对器官功能异常）
+        # Get recommended drugs (for organ function abnormalities)
         recommendations = []
         
-        # 针对肾功能异常推荐
+        # Recommendations for kidney function abnormalities
         kidney_recs = combination_analyzer.get_drug_recommendations(
             current_drugs, 
-            outcome='death',  # 使用death作为代理，实际应该基于器官功能
+            outcome='death',  # Use death as proxy, should actually be based on organ function
             top_n=5
         )
         
-        # 分析每个推荐药物与当前药物的组合，看是否能降低器官功能异常风险
+        # Analyze each recommended drug's combination with current drugs to see if it can reduce organ function abnormality risk
         protective_drugs = []
         for rec in kidney_recs:
-            # 检查该药物是否与当前药物组合有保护性
+            # Check if this drug has protective combination with current drugs
             drug = rec['drug']
             has_protective_combo = False
             
             for current_drug in current_drugs:
                 try:
-                    # 分析组合效果（这里简化处理，实际可以更复杂）
+                    # Analyze combination effect (simplified here, can be more complex)
                     analysis = combination_analyzer.analyze_combination_outcomes(
                         current_drug, drug, 'death'
                     )
@@ -743,42 +743,42 @@ def get_drug_recommendations():
                     'best_combo_with': rec.get('best_combo_with', ''),
                     'risk_reduction': rec.get('risk_reduction', 0),
                     'potential_benefit': rec.get('potential_benefit', ''),
-                    'reason': f"与{rec.get('best_combo_with', '当前药物')}联用可能降低不良结局风险"
+                    'reason': f"Combination with {rec.get('best_combo_with', 'current drugs')} may reduce adverse outcome risk"
                 })
         
-        # 添加一些已知的保护性药物（基于临床知识）
+        # Add some known protective drugs (based on clinical knowledge)
         known_protective_drugs = {
             'n-acetylcysteine': {
-                'reason': 'N-乙酰半胱氨酸：抗氧化剂，可能保护肝肾功能，减少氧化应激损伤',
-                'category': '保护性药物'
+                'reason': 'N-acetylcysteine: Antioxidant, may protect liver and kidney function, reduce oxidative stress damage',
+                'category': 'Protective drug'
             },
             'vitamin_e': {
-                'reason': '维生素E：抗氧化，可能降低器官损伤风险',
-                'category': '保护性药物'
+                'reason': 'Vitamin E: Antioxidant, may reduce organ damage risk',
+                'category': 'Protective drug'
             },
             'magnesium': {
-                'reason': '镁：可能保护肾功能，维持电解质平衡',
-                'category': '保护性药物'
+                'reason': 'Magnesium: May protect kidney function, maintain electrolyte balance',
+                'category': 'Protective drug'
             },
             'vitamin': {
-                'reason': '维生素：可能支持器官功能，增强机体抵抗力',
-                'category': '保护性药物'
+                'reason': 'Vitamins: May support organ function, enhance body resistance',
+                'category': 'Protective drug'
             },
             'ascorbic': {
-                'reason': '维生素C：抗氧化，可能保护器官功能',
-                'category': '保护性药物'
+                'reason': 'Vitamin C: Antioxidant, may protect organ function',
+                'category': 'Protective drug'
             },
             'thiamine': {
-                'reason': '维生素B1：可能支持器官代谢功能',
-                'category': '保护性药物'
+                'reason': 'Vitamin B1: May support organ metabolic function',
+                'category': 'Protective drug'
             },
             'folic': {
-                'reason': '叶酸：可能支持器官功能',
-                'category': '保护性药物'
+                'reason': 'Folic acid: May support organ function',
+                'category': 'Protective drug'
             }
         }
         
-        # 检查这些药物是否在数据中
+        # Check if these drugs are in the data
         for drug_name, info in known_protective_drugs.items():
             matching_drugs = [d for d in combination_analyzer.drug_columns 
                             if drug_name.lower() in d.lower()]
@@ -787,11 +787,11 @@ def get_drug_recommendations():
                     'drug': matching_drugs[0],
                     'reason': info['reason'],
                     'category': info['category'],
-                    'risk_reduction': 0.1,  # 默认值
+                    'risk_reduction': 0.1,  # Default value
                     'potential_benefit': info['reason']
                 })
         
-        # 去重并排序
+        # Remove duplicates and sort
         seen = set()
         unique_recs = []
         for rec in protective_drugs:
@@ -803,7 +803,7 @@ def get_drug_recommendations():
         
         return jsonify({
             'success': True,
-            'recommendations': unique_recs[:10],  # 返回前10个
+            'recommendations': unique_recs[:10],  # Return top 10
             'current_drugs': current_drugs,
             'total_recommendations': len(unique_recs)
         })
@@ -813,74 +813,73 @@ def get_drug_recommendations():
             'error': str(e)
         }), 500
 
-# 在模块加载时初始化（gunicorn 启动时会执行）
-# 使用延迟初始化，避免在导入时立即加载（可能影响启动速度）
+# Initialize when module is loaded (executed when gunicorn starts)
+# Use lazy initialization to avoid loading immediately on import (may affect startup speed)
 _models_loaded = False
 
 def initialize_models():
-    """初始化模型和数据（用于 gunicorn 启动时调用）"""
+    """Initialize models and data (called when gunicorn starts)"""
     global _models_loaded
     if not _models_loaded:
-        print("正在加载模型...")
+        print("Loading models...")
         load_models()
         _models_loaded = True
 
-# 使用 gunicorn 的 on_starting 钩子会在 worker 启动前执行
-# 但更好的方式是在模块级别调用（每个 worker 都需要加载数据）
-# 在应用启动时初始化（gunicorn 会在导入模块时执行这部分代码）
+# Using gunicorn's on_starting hook executes before worker starts
+# But better way is to call at module level (each worker needs to load data)
+# Initialize when application starts (gunicorn will execute this code when importing module)
 try:
     initialize_models()
 except Exception as e:
-    print(f"警告：初始化时加载模型失败: {e}")
+    print(f"Warning: Failed to load models during initialization: {e}")
     import traceback
     traceback.print_exc()
-    # 不退出，允许服务启动，但功能会受限
+    # Don't exit, allow service to start, but features will be limited
 
 if __name__ == '__main__':
     try:
-        # 如果直接运行，确保模型已加载
+        # If running directly, ensure models are loaded
         if not _models_loaded:
             initialize_models()
         
-        # 验证路由是否注册
-        print("\n验证路由注册...")
+        # Verify routes are registered
+        print("\nVerifying route registration...")
         routes = list(app.url_map.iter_rules())
-        print(f"✅ 已注册 {len(routes)} 个路由:")
+        print(f"✅ Registered {len(routes)} routes:")
         for rule in routes:
             if 'static' not in str(rule):
                 print(f"  {rule}")
         
-        print("\n启动CDSS API服务器...")
+        print("\nStarting CDSS API server...")
         print("=" * 60)
-        print("API端点:")
-        print("  GET  /                      - API文档")
-        print("  GET  /health                 - 健康检查")
-        print("  POST /predict                - 预测肝肾功能异常")
-        print("  POST /warn                   - 药物组合风险预警")
-        print("  POST /analyze                - 综合分析")
-        print("  POST /drug_combinations      - 分析患者药物组合")
-        print("  GET  /drug_combinations/common   - 获取常见药物组合")
-        print("  GET  /drug_combinations/risky    - 获取高风险药物组合")
-        print("  GET  /drug_combinations/effective - 获取有效药物组合")
-        print("  GET  /drugs/list             - 获取药物列表")
-        print("  POST /drugs/recommend        - 获取药物推荐")
-        print("  GET/POST /drugs/protective-effects - 分析药物保护性效果")
+        print("API endpoints:")
+        print("  GET  /                      - API documentation")
+        print("  GET  /health                 - Health check")
+        print("  POST /predict                - Predict kidney and liver function abnormalities")
+        print("  POST /warn                   - Drug combination risk warning")
+        print("  POST /analyze                - Comprehensive analysis")
+        print("  POST /drug_combinations      - Analyze patient drug combinations")
+        print("  GET  /drug_combinations/common   - Get common drug combinations")
+        print("  GET  /drug_combinations/risky    - Get high-risk drug combinations")
+        print("  GET  /drug_combinations/effective - Get effective drug combinations")
+        print("  GET  /drugs/list             - Get drug list")
+        print("  POST /drugs/recommend        - Get drug recommendations")
+        print("  GET/POST /drugs/protective-effects - Analyze drug protective effects")
         print("=" * 60)
         
-        # 获取端口号，优先使用环境变量（Render会设置PORT环境变量）
+        # Get port number, prefer environment variable (Render sets PORT environment variable)
         PORT = int(os.environ.get('PORT', 5003))
-        HOST = os.environ.get('HOST', '0.0.0.0')  # Render需要监听0.0.0.0
+        HOST = os.environ.get('HOST', '0.0.0.0')  # Render needs to listen on 0.0.0.0
         
-        print(f"\n服务器运行在 http://{HOST}:{PORT}")
-        print(f"访问 http://localhost:{PORT} 查看API文档")
-        print("打开 drug_combination_analyzer.html 使用药物组合分析界面")
-        print("\n按 Ctrl+C 停止服务器")
+        print(f"\nServer running on http://{HOST}:{PORT}")
+        print(f"Visit http://localhost:{PORT} to view API documentation")
+        print("Open drug_combination_analyzer.html to use drug combination analysis interface")
+        print("\nPress Ctrl+C to stop server")
         print("=" * 60)
         
         app.run(host=HOST, port=PORT, debug=False, use_reloader=False, threaded=True)
     except Exception as e:
-        print(f"\n❌ 启动失败: {e}")
+        print(f"\n❌ Startup failed: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
-
