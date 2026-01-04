@@ -1738,6 +1738,42 @@
                         ${t('suggestionAntioxidant')}
                     </p>
                 `;
+            } else if (hasLowRisk && hasRecommendations) {
+                // Show preventive recommendations for low risk cases
+                recommendationsHtml += `
+                    <h4 style="margin-top: 20px; color: #155724;">💊 ${t('preventOrganDysfunction')}</h4>
+                    <p style="color: #666; font-size: 12px; margin-bottom: 15px;">
+                        ${currentLanguage === 'zh' ? '当前风险较低，以下保护性药物可作为预防性使用，帮助维持器官功能健康' : 
+                          currentLanguage === 'fr' ? 'Le risque actuel est faible, les médicaments protecteurs suivants peuvent être utilisés de manière préventive pour aider à maintenir la santé des organes' :
+                          'Current risk is low, the following protective drugs can be used preventively to help maintain organ health'}:
+                    </p>
+                    <div style="display: grid; gap: 10px;">
+                        ${recommendations.recommendations.map(rec => `
+                            <div class="combination-item" style="background: #d4edda; border-left: 4px solid #28a745;">
+                                <h4 style="color: #155724; margin-bottom: 8px;">
+                                    ${rec.drug}
+                                    ${rec.best_combo_with ? `<span style="font-size: 12px; color: #666;">(${currentLanguage === 'zh' ? `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}` : currentLanguage === 'fr' ? `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}` : `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}`})</span>` : ''}
+                                </h4>
+                                <p style="color: #155724; margin: 5px 0;">
+                                    <strong>${t('recommendedReason')}:</strong> ${rec.reason || rec.potential_benefit || (currentLanguage === 'zh' ? '可能有助于维持器官功能健康' : currentLanguage === 'fr' ? 'Peut aider à maintenir la santé des organes' : 'May help maintain organ health')}
+                                </p>
+                                ${rec.risk_reduction > 0 ? `
+                                    <p style="color: #155724; font-size: 12px; margin-top: 5px;">
+                                        ${t('potentialRiskReduction')}: ${(rec.risk_reduction * 100).toFixed(1)}%
+                                    </p>
+                                ` : ''}
+                                <button onclick="addRecommendedDrug('${rec.drug}')" 
+                                        style="margin-top: 10px; padding: 6px 15px; background: #28a745; color: white; 
+                                               border: none; border-radius: 5px; cursor: pointer; font-size: 12px;">
+                                    ➕ ${t('addThisDrug')}
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <p style="color: #999; font-size: 11px; margin-top: 15px;">
+                        ${t('noteRecommendations')}
+                    </p>
+                `;
             }
             
             if (recommendationsHtml) {
