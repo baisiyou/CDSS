@@ -1,252 +1,345 @@
-# 临床决策支持系统 (CDSS)
+# Clinical Decision Support System (CDSS)
 
-## 系统概述
+## System Overview
 
-本系统是一个基于机器学习的临床决策支持系统，旨在辅助医生：
-- 判断是否需要调整用药
-- 预测药物不良反应（肝肾功能异常）
-- 推荐治疗方案
-- 预警高风险药物组合
+This system is a machine learning-based clinical decision support system designed to assist physicians in:
 
-## 主要功能
+- Determining whether medication adjustments are necessary
 
-### 1. 肝肾功能异常预测
-- 基于患者用药情况和实验室指标，预测是否会出现：
-  - 肾功能异常（肌酐升高、BUN异常）
-  - 肝功能异常（转氨酶异常、INR升高）
+- Predicting adverse drug reactions (liver and kidney dysfunction)
 
-### 2. 药物组合风险预警
-- 检测高风险药物组合：
-  - 抗生素 + 肾毒性药物联用
-  - 多种肾毒性药物联用
-  - 肝毒性药物组合
-- 基于实验室指标评估当前风险状态
+- Recommending treatment plans
 
-## 系统架构
+- Providing early warnings for high-risk drug combinations
+
+## Main Functions
+
+### 1. Liver and Kidney Function Abnormality Prediction
+
+- Based on the patient's medication history and laboratory indicators, predict the likelihood of:
+
+- Kidney dysfunction (elevated creatinine, abnormal BUN)
+
+- Liver dysfunction (abnormal transaminases, elevated INR)
+
+### 2. Drug Combination Risk Warning
+
+- Detecting high-risk drug combinations:
+
+- Antibiotics + Nephrotoxic Drugs in combination
+
+- Multiple nephrotoxic drugs in combination
+
+- Hepatotoxic Drug Combinations
+
+- Assessing the current risk status based on laboratory indicators
+
+## System Architecture
+
+``` Clinical Decision Support System (CDSS) /
+
+├── data_preprocessing.py # Data preprocessing module
+
+├── prediction_models.py # Predictive Model Module
+
+├── drug_interaction_warning.py # Drug interaction warning module
+
+├── drug_combination_analyzer.py # Drug combination analysis module
+
+├── train_models.py # Model training script
+
+├── cdss_api.py # Flask API service
+
+├── drug_combination_analyzer.html # Drug combination analysis front-end interface
+
+├── requirements.txt # Python dependencies
+
+├── README.md # Documentation
+
+├── One-click start and open.sh # One-click start script
+
+├── eicu_mimic_lab_time.csv # Training data
+
+└── models/ # Model save directory (generated after training)
+
+├── organ_function_predictor.pkl
+
+└── preprocessor.pkl
 
 ```
-临床决策支持系统（CDSS）/
-├── data_preprocessing.py          # 数据预处理模块
-├── prediction_models.py          # 预测模型模块
-├── drug_interaction_warning.py    # 药物相互作用预警模块
-├── drug_combination_analyzer.py   # 药物组合分析模块
-├── train_models.py               # 模型训练脚本
-├── cdss_api.py                   # Flask API服务
-├── drug_combination_analyzer.html # 药物组合分析前端界面
-├── requirements.txt              # Python依赖
-├── README.md                     # 说明文档
-├── 一键启动并打开.sh              # 一键启动脚本
-├── eicu_mimic_lab_time.csv        # 训练数据
-└── models/                       # 模型保存目录（训练后生成）
-    ├── organ_function_predictor.pkl
-    └── preprocessor.pkl
-```
 
-## 安装和使用
+## Installation and Usage
 
-### 1. 安装依赖
+### 1. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
+
 ```
 
-### 2. 训练模型
+### 2. Training the Model
 
-首先需要训练预测模型：
+First, you need to train the prediction model:
 
 ```bash
 python train_models.py
+
 ```
+This will:
 
-这将：
-- 加载 `eicu_mimic_lab_time.csv` 数据
-- 预处理数据并创建目标标签
-- 训练随机森林模型
-- 保存模型到 `models/` 目录
+- Load the `eicu_mimic_lab_time.csv` data
 
-**注意**：如果模型文件已存在，可以跳过此步骤。
+- Preprocess the data and create target labels
 
-### 3. 启动系统
+- Train the random forest model
 
-#### 方法1：一键启动（推荐）
+- Save the model to the `models/` directory
+
+**Note:** If the model file already exists, you can skip this step.
+
+### 3. Starting the System
+
+#### Method 1: One-Click Startup (Recommended)
 
 ```bash
-chmod +x 一键启动并打开.sh
-./一键启动并打开.sh
+chmod +x One-click start and open .sh
+
+./ One-click start and open .sh
+
 ```
 
-这个脚本会：
-- 自动检查并停止旧进程
-- 启动API服务（端口5003）
-- 等待服务就绪
-- 自动打开前端界面
+This script will:
 
-#### 方法2：手动启动
+- Automatically check and stop old processes
+
+- Start the API service (port 5003)
+
+- Wait for the service to be ready
+
+- Automatically open the front-end interface
+
+#### Method 2: Manual Startup
 
 ```bash
-# 启动API服务
+
+# Start the API service
+
 python cdss_api.py
+
 ```
 
-API服务将在 `http://localhost:5003` 启动。
+The API service will start at `http://localhost:5003`.
 
-### 4. 使用Web界面
+### 4. Using the Web Interface
 
-1. 打开 `drug_combination_analyzer.html` 文件（在浏览器中打开）
-2. 选择或搜索药物（支持中文和英文）
-3. 点击"开始分析"按钮
-4. 查看分析结果：
-   - 总体风险评估
-   - 多器官功能障碍预测
-   - 推荐药物
+1. Open the `drug_combination_analyzer.html` file (open in your browser)
 
-**注意**：系统支持多语言切换（中文/English/Français），可在页面右上角切换。
+2. Select or search for a drug (supports Chinese and English)
 
-## API接口
+3. Click the "Start Analysis" button
 
-### 健康检查
+4. View the analysis results:
+
+- Overall risk assessment
+
+- Multiple organ dysfunction prediction
+
+- Recommended drugs
+
+**Note:** The system supports multilingual switching (Chinese/English/Français), which can be done in the upper right corner of the page.
+
+## API Interface
+
+### Health Check
+
 ```
 GET /health
+
 ```
 
-### 预测肝肾功能异常
+### Predict Liver and Kidney Function Abnormalities
+
 ```
 POST /predict
 Content-Type: application/json
 
 {
-  "bun": 1.2,
-  "inr": 0.8,
-  "vancomycin": 1,
-  "furosemide": 1,
-  ...
+"bun": 1.2,
+
+"inr": 0.8,
+
+"vancomycin": 1,
+
+"furosemide": 1,
+
+...
 }
 ```
 
-### 药物组合风险预警
+### Drug Combination Risk Warning
+
 ```
 POST /warn
 Content-Type: application/json
 
 {
-  "vancomycin": 1,
-  "furosemide": 1,
-  "bun": 2.0,
-  ...
+"vancomycin": 1,
+
+"furosemide": 1,
+
+"bun": 2.0,
+
+...
 }
 ```
 
-### 综合分析
+### Comprehensive Analysis
+
 ```
 POST /analyze
 Content-Type: application/json
 
 {
-  "patientunitstayid": "12345",
-  "bun": 1.2,
-  "vancomycin": 1,
-  ...
+"patientunitstayid": "12345",
+
+"bun": 1.2,
+
+"vancomycin": 1,
+...
+
 }
 ```
 
-### 药物组合分析
+### Drug Combination Analysis
 ```
 POST /drug_combinations
 Content-Type: application/json
 
 {
-  "aspirin": 1,
-  "prednisone": 1,
-  "piperacillin": 1
+"aspirin": 1,
+
+"prednisone": 1,
+
+"piperacillin": 1
+
 }
 ```
 
-### 获取药物列表
+### Get Drug List
 ```
 GET /drugs/list?limit=1000
 ```
 
-### 获取推荐药物
+### Get Recommended Drugs
 ```
 POST /drugs/recommend
 Content-Type: application/json
 
 {
-  "drugs": ["aspirin", "prednisone"]
+"drugs": ["aspirin", "prednisone"]
+
 }
 ```
 
-## 技术实现
+## Technical Implementation
 
-### 预测模型
-- **算法**: 随机森林 (Random Forest)
-- **特征**: 药物使用情况、实验室指标、患者基本信息
-- **目标**: 二分类（正常/异常）
+### Predictive Model
 
-### 风险预警规则
-- **肾毒性药物**: 氨基糖苷类、利尿剂、NSAIDs、ACE抑制剂、造影剂等
-- **肝毒性药物**: 对乙酰氨基酚、胺碘酮、他汀类等
-- **高风险组合**: 抗生素+肾毒性药物、多种肾毒性药物联用
+- **Algorithm**: Random Forest
 
-### 实验室指标评估
-- BUN (血尿素氮): 正常范围 (-2, 1.5)
-- INR (国际标准化比值): 正常范围 (-2, 1.2)
-- 白蛋白: 正常范围 (-1.0, 2)
+- **Features**: Drug usage, laboratory indicators, patient basic information
 
-## 使用示例
+- **Target**: Binary classification (normal/abnormal)
 
-### Python代码示例
+### Risk Warning Rules
+
+- **Nephrogenic Drugs**: Aminoglycosides, diuretics, NSAIDs, ACE inhibitors, contrast agents, etc.
+
+- **Hepatotoxic Drugs**: Acetaminophen, amiodarone, statins, etc.
+
+- **High-Risk Combinations**: Antibiotics + nephrotoxic drugs, multiple nephrotoxic drugs in combination
+
+### Laboratory Indicator Assessment
+
+- BUN (Blood Urea Nitrogen): Normal range (-2, 1.5)
+
+- INR (International Normalized Ratio): Normal range (-2, 1.2)
+
+- Albumin: Normal range (-1.0, 2)
+
+## Usage Example
+
+### Python Code Example
 
 ```python
 from prediction_models import OrganFunctionPredictor
 from drug_interaction_warning import DrugInteractionWarning
 import pandas as pd
 
-# 加载模型
+# Load the model
 predictor = OrganFunctionPredictor()
+
 predictor.load('models/organ_function_predictor.pkl')
 
-# 预测
+# Prediction
+
 patient_data = pd.DataFrame([{
-    'vancomycin': 1,
-    'furosemide': 1,
-    'bun': 2.0,
-    # ... 其他特征
+'vancomycin': 1,
+
+'furosemide': 1,
+
+'bun': 2.0,
+
+# ... Other features
+
 }])
 
 X = preprocessor.extract_features(patient_data)
+
 X_scaled = preprocessor.scale_features(X)
+
 predictions = predictor.predict_all(X_scaled)
 
-# 预警
+# Warning
+
 warning_system = DrugInteractionWarning()
+
 warning = warning_system.generate_warning(
-    patient_data, 
-    drug_columns, 
-    lab_columns
+patient_data,
+
+drug_columns,
+
+lab_columns
+
 )
 ```
 
-## 注意事项
+## Notes
 
-1. **数据标准化**: 实验室指标需要标准化后才能输入模型
-2. **模型更新**: 建议定期使用新数据重新训练模型
-3. **临床验证**: 系统预测结果仅供参考，需结合临床判断
-4. **数据隐私**: 确保患者数据的安全和隐私保护
+1. **Data Standardization**: Laboratory indicators need to be standardized before being input into the model.
 
-## 未来改进
+2. **Model Update**: It is recommended to retrain the model regularly with new data.
 
-- [ ] 支持更多实验室指标
-- [ ] 增加时间序列预测
-- [ ] 集成更多药物相互作用数据库
-- [ ] 优化模型性能
-- [ ] 添加模型解释性分析
+3. **Clinical Validation**: System prediction results are for reference only and should be combined with clinical judgment.
 
-## 许可证
+4. **Data Privacy**: Ensure the security and privacy protection of patient data.
 
-本项目仅供学习和研究使用。
+## Future Improvements
 
-## 联系方式
+- [ ] Support more laboratory indicators
 
-如有问题或建议，请联系开发团队。
+- [ ] Add time series prediction
 
+- [ ] Integrate more drug interaction databases
+
+- [ ] Optimize model performance
+
+- [ ] Add model interpretability analysis
+
+## License
+
+This project is for learning and research purposes only.
+
+## Contact Information
+
+For questions or suggestions, please contact the development team.
