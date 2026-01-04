@@ -853,6 +853,70 @@ def get_drug_recommendations():
             'error': str(e)
         }), 500
 
+@app.route('/drugs/side-effects', methods=['GET', 'POST', 'OPTIONS'])
+def get_drug_side_effects():
+    """Get drug side effects and toxicity information"""
+    try:
+        if side_effects_db is None:
+            return jsonify({
+                'success': False,
+                'error': 'Side effects database not initialized',
+                'message': 'Side effects database not loaded'
+            }), 503
+        
+        # Support both GET and POST requests
+        if request.method == 'GET':
+            drug_names = request.args.get('drugs', '')
+            if drug_names:
+                # Comma-separated list
+                drug_list = [d.strip() for d in drug_names.split(',') if d.strip()]
+            else:
+                drug_list = []
+        else:
+            # POST request
+            data = request.json or {}
+            drug_list = data.get('drugs', [])
+            if isinstance(drug_list, str):
+                # If it's a string, try to split by comma
+                drug_list = [d.strip() for d in drug_list.split(',') if d.strip()]
+        
+        if not drug_list:
+            return jsonify({
+                'success': False,
+                'error': 'Please provide drug names (drugs parameter)',
+                'message': 'Provide a list of drug names to get side effects information'
+            }), 400
+        
+        # Get side effects for each drug
+        results = []
+        for drug_name in drug_list:
+            drug_info = side_effects_db.get_side_effects(drug_name)
+            if drug_info:
+                results.append({
+                    'drug': drug_name,
+                    'found': True,
+                    **drug_info
+                })
+            else:
+                results.append({
+                    'drug': drug_name,
+                    'found': False,
+                    'message': f'Side effects information not available for {drug_name}'
+                })
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'total_drugs': len(drug_list),
+            'found_count': sum(1 for r in results if r.get('found', False))
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # Initialize when module is loaded (executed when gunicorn starts)
 # Use lazy initialization to avoid loading immediately on import (may affect startup speed)
 _models_loaded = False
