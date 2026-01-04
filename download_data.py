@@ -73,7 +73,14 @@ def download_with_b2sdk():
         # b2sdk未安装，返回False让其他方法尝试
         return False
     except Exception as e:
+        error_str = str(e)
         print(f"⚠️  b2sdk 下载失败: {e}")
+        
+        # 检查是否是配额问题
+        if 'download_cap_exceeded' in error_str or '403' in error_str:
+            print("   提示: B2下载配额已用完，请到Backblaze控制台的'Caps & Alerts'页面增加配额")
+            print("   或者将bucket设置为公开访问，使用公开URL下载")
+        
         return False
 
 def download_with_b2():
@@ -134,7 +141,12 @@ def main():
         return 0
     
     print("❌ 所有下载方式均失败")
-    print("提示: 部分功能将不可用，但服务仍可启动")
+    print("\n可能的解决方案：")
+    print("1. 增加B2下载配额：登录Backblaze控制台 → Caps & Alerts → 增加下载带宽/交易上限")
+    print("2. 将bucket设置为公开访问：这样可以使用公开URL下载，不消耗Class B交易")
+    print("3. 检查B2_APPLICATION_KEY环境变量是否正确设置")
+    print("4. 如果文件已存在，可以跳过下载")
+    print("\n提示: 部分功能将不可用，但服务仍可启动（仅支持药物列表查询）")
     return 1
 
 if __name__ == '__main__':
