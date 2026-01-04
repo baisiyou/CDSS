@@ -17,15 +17,13 @@ from drug_side_effects import DrugSideEffects
 
 app = Flask(__name__)
 # Enable CORS - allow all origins and handle preflight requests
-# CORS(app) automatically handles OPTIONS preflight requests
-CORS(app, resources={
-    r"/*": {
-        "origins": "*",
-        "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
-        "supports_credentials": False
-    }
-})
+# Configure CORS to automatically handle OPTIONS preflight requests
+CORS(app, 
+     resources={r"/*": {"origins": "*"}},
+     supports_credentials=False,
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+     max_age=3600)
 
 # Global variables
 predictor = None
