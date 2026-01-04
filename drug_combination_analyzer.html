@@ -413,6 +413,8 @@
             display: block;
         }
     </style>
+    <!-- API配置脚本 - 必须在其他脚本之前加载 -->
+    <script src="config.js"></script>
 </head>
 <body>
     <div class="container">
@@ -482,7 +484,11 @@
     </div>
     
     <script>
-        const API_BASE = 'http://localhost:5003';
+        // 支持通过URL参数或config.js配置API地址
+        // 优先级：URL参数 > config.js中的window.API_BASE_URL > 默认localhost
+        const urlParams = new URLSearchParams(window.location.search);
+        const API_BASE = urlParams.get('api') || 
+                        (typeof window.API_BASE_URL !== 'undefined' ? window.API_BASE_URL : 'http://localhost:5003');
         let allDrugs = [];
         let selectedDrugs = [];
         let currentOrgan = 'kidney'; // 当前选择的器官类型
@@ -512,6 +518,8 @@
                 selectedDrugs: '已选药物',
                 analyzing: '分析中...',
                 errorApiConnection: '无法连接到API服务，请确保API服务正在运行',
+                errorApiTimeout: 'API服务响应超时，免费版服务可能需要30秒启动，请稍后重试',
+                serviceStarting: '服务正在启动中，请稍候...（首次访问可能需要30秒）',
                 errorNoDrugs: '未找到匹配的药物',
                 errorTryEnglish: '请尝试输入英文名称',
                 predictionResult: '预测结果',
@@ -591,6 +599,8 @@
                 selectedDrugs: 'Selected drugs',
                 analyzing: 'Analyzing...',
                 errorApiConnection: 'Cannot connect to API service, please ensure the API service is running',
+                errorApiTimeout: 'API service timeout, free tier service may need 30 seconds to start, please retry later',
+                serviceStarting: 'Service is starting, please wait... (First access may take 30 seconds)',
                 errorNoDrugs: 'No matching drugs found',
                 errorTryEnglish: 'Please try entering English names',
                 predictionResult: 'Prediction Result',
@@ -670,6 +680,8 @@
                 selectedDrugs: 'Médicaments sélectionnés',
                 analyzing: 'Analyse en cours...',
                 errorApiConnection: 'Impossible de se connecter au service API, veuillez vous assurer que le service API est en cours d\'exécution',
+                errorApiTimeout: 'Délai d\'attente du service API dépassé, le service gratuit peut nécessiter 30 secondes pour démarrer, veuillez réessayer plus tard',
+                serviceStarting: 'Le service démarre, veuillez patienter... (Le premier accès peut prendre 30 secondes)',
                 errorNoDrugs: 'Aucun médicament correspondant trouvé',
                 errorTryEnglish: 'Veuillez essayer d\'entrer des noms anglais',
                 predictionResult: 'Résultat de la Prédiction',
@@ -883,18 +895,102 @@
             setupDrugSearch();
         });
         
+        // 带超时和重试的fetch函数
+        async function fetchWithTimeout(url, options = {}, timeout = 45000, maxRetries = 1) {
+            let lastError = null;
+            
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    if (attempt > 0) {
+                        // 重试前等待，每次重试等待时间递增
+                        const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+                        console.log(`第 ${attempt + 1} 次尝试，等待 ${waitTime}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                    }
+                    
+                    // 每次尝试创建新的controller
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), timeout);
+                    
+                    try {
+                        const response = await fetch(url, {
+                            ...options,
+                            signal: controller.signal
+                        });
+                        
+                        clearTimeout(timeoutId);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        return response;
+                    } finally {
+                        clearTimeout(timeoutId);
+                    }
+                } catch (error) {
+                    lastError = error;
+                    
+                    // 如果是超时或网络错误，且还有重试机会，则继续重试
+                    if (attempt < maxRetries && (error.name === 'AbortError' || error.name === 'TypeError')) {
+                        console.warn(`请求失败 (尝试 ${attempt + 1}/${maxRetries + 1}):`, error.message);
+                        continue;
+                    }
+                    
+                    // 如果是最后一次尝试，或者不是可重试的错误，则抛出错误
+                    throw error;
+                }
+            }
+            
+            throw lastError || new Error('请求失败');
+        }
+        
         // 加载所有药物列表
         async function loadDrugs() {
             try {
-                const response = await fetch(`${API_BASE}/drugs/list?limit=1000`);
+                console.log(`正在连接到API: ${API_BASE}`);
+                // 首次尝试显示启动提示
+                const loadingHint = document.getElementById('drugSearchHint');
+                if (loadingHint) {
+                    const originalText = loadingHint.textContent;
+                    loadingHint.textContent = t('serviceStarting');
+                    loadingHint.style.color = '#667eea';
+                }
+                
+                const response = await fetchWithTimeout(
+                    `${API_BASE}/drugs/list?limit=1000`,
+                    {},
+                    45000, // 45秒超时（Render免费版可能需要30秒启动）
+                    1      // 最多重试1次（总共2次尝试）
+                );
+                
                 const data = await response.json();
                 if (data.success) {
                     allDrugs = data.drugs;
-                    console.log(`加载了 ${allDrugs.length} 种药物`);
+                    console.log(`✅ 加载了 ${allDrugs.length} 种药物`);
+                    
+                    // 恢复提示文本
+                    if (loadingHint) {
+                        loadingHint.textContent = t('drugSearchHint');
+                        loadingHint.style.color = '#666';
+                    }
                 }
             } catch (error) {
-                console.error('加载药物列表失败:', error);
-                showError(t('errorApiConnection'));
+                console.error('❌ 加载药物列表失败:', error);
+                
+                // 恢复提示文本
+                const loadingHint = document.getElementById('drugSearchHint');
+                if (loadingHint) {
+                    loadingHint.textContent = t('drugSearchHint');
+                    loadingHint.style.color = '#666';
+                }
+                
+                // 根据错误类型显示不同的错误消息
+                if (error.name === 'AbortError') {
+                    showError(t('errorApiTimeout'));
+                } else {
+                    showError(t('errorApiConnection') + ' ' + error.message);
+                }
             }
         }
         
@@ -1156,22 +1252,32 @@
                 patientData.hct = 0;
                 
                 // 同时调用药物组合分析、器官功能预测和药物推荐
+                // 使用带超时的fetch，但只对主要请求重试
                 const [combinationResponse, predictResponse, recommendResponse] = await Promise.all([
-                    fetch(`${API_BASE}/drug_combinations`, {
+                    fetchWithTimeout(`${API_BASE}/drug_combinations`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(patientData)
+                    }, 45000, 1).catch(e => {
+                        console.error('药物组合分析请求失败:', e);
+                        throw e; // 主要请求失败则抛出错误
                     }),
-                    fetch(`${API_BASE}/predict`, {
+                    fetchWithTimeout(`${API_BASE}/predict`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(patientData)
-                    }).catch(e => null), // 如果预测失败，继续显示组合分析
-                    fetch(`${API_BASE}/drugs/recommend`, {
+                    }, 30000, 0).catch(e => {
+                        console.warn('预测请求失败:', e);
+                        return null; // 预测失败，继续显示组合分析
+                    }),
+                    fetchWithTimeout(`${API_BASE}/drugs/recommend`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ drugs: selectedDrugs })
-                    }).catch(e => null) // 如果推荐失败，继续显示其他结果
+                    }, 30000, 0).catch(e => {
+                        console.warn('推荐请求失败:', e);
+                        return null; // 推荐失败，继续显示其他结果
+                    })
                 ]);
                 
                 const combinationData = await combinationResponse.json();
