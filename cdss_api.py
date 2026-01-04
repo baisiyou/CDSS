@@ -59,32 +59,51 @@ def load_models():
         print("药物预警系统初始化成功")
         
         # 初始化药物组合分析器
+        # 优先使用模型文件（轻量级），如果不存在则使用原始数据文件
         combination_analyzer = DrugCombinationAnalyzer()
+        model_path = 'models/drug_combination_model.pkl'
         data_path = 'eicu_mimic_lab_time.csv'
-        if os.path.exists(data_path):
+        
+        # 优先尝试加载模型文件
+        if os.path.exists(model_path):
             try:
-                # 通过环境变量控制是否加载完整数据
-                # LOAD_FULL_DATA=true 时加载完整数据（需要更多内存，可能超过免费版512MB限制）
-                # 默认加载完整数据，如果内存不足会失败
-                load_full_data = os.environ.get('LOAD_FULL_DATA', 'true').lower() == 'true'
-                
-                if load_full_data:
-                    print("正在加载完整数据（这可能需要一些时间和内存）...")
-                    combination_analyzer.load_data(data_path, load_full_data=True)
-                    print("药物组合分析系统初始化成功（完整数据已加载）")
-                else:
-                    # 只读取列名，不加载完整数据（节省内存，适用于免费版512MB限制）
-                    print("正在读取药物列表（仅列名，不加载完整数据以节省内存）...")
-                    combination_analyzer.load_data(data_path, load_full_data=False)
-                    print("药物列表加载成功（完整数据分析功能不可用，但药物列表可用）")
+                print("正在加载药物组合模型（预计算数据）...")
+                combination_analyzer.load_model(model_path)
+                print("药物组合分析系统初始化成功（使用预计算模型，内存占用低）")
             except Exception as e:
-                print(f"警告：数据加载失败: {e}")
-                print("如果内存不足，可以设置环境变量 LOAD_FULL_DATA=false 来只加载列名")
-                print("药物组合分析功能将不可用，但其他功能正常")
+                print(f"警告：模型加载失败: {e}")
+                print("尝试使用原始数据文件...")
                 import traceback
                 traceback.print_exc()
-        else:
-            print("警告：数据文件不存在，药物组合分析功能将不可用")
+                # 如果模型加载失败，尝试使用原始数据
+                model_path = None
+        
+        # 如果模型不存在或加载失败，使用原始数据文件
+        if model_path is None or not os.path.exists(model_path):
+            if os.path.exists(data_path):
+                try:
+                    # 通过环境变量控制是否加载完整数据
+                    # LOAD_FULL_DATA=true 时加载完整数据（需要更多内存，可能超过免费版512MB限制）
+                    # 默认只加载列名（节省内存）
+                    load_full_data = os.environ.get('LOAD_FULL_DATA', 'false').lower() == 'true'
+                    
+                    if load_full_data:
+                        print("正在加载完整数据（这可能需要一些时间和内存）...")
+                        combination_analyzer.load_data(data_path, load_full_data=True)
+                        print("药物组合分析系统初始化成功（完整数据已加载）")
+                    else:
+                        # 只读取列名，不加载完整数据（节省内存，适用于免费版512MB限制）
+                        print("正在读取药物列表（仅列名，不加载完整数据以节省内存）...")
+                        combination_analyzer.load_data(data_path, load_full_data=False)
+                        print("药物列表加载成功（完整数据分析功能不可用，但药物列表可用）")
+                except Exception as e:
+                    print(f"警告：数据加载失败: {e}")
+                    print("如果内存不足，可以设置环境变量 LOAD_FULL_DATA=false 来只加载列名")
+                    print("药物组合分析功能将不可用，但其他功能正常")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print("警告：模型文件和数据文件都不存在，药物组合分析功能将不可用")
     except Exception as e:
         print(f"错误：加载模型时发生异常: {e}")
         import traceback

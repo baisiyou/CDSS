@@ -11,10 +11,11 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class DrugCombinationAnalyzer:
-    def __init__(self, data_path=None):
+    def __init__(self, data_path=None, model_path=None):
         """
         初始化药物组合分析器
-        data_path: 数据文件路径，如果提供则自动加载数据
+        data_path: 数据文件路径（CSV），如果提供则自动加载数据
+        model_path: 模型文件路径（PKL），如果提供则从模型加载（优先于data_path）
         """
         self.data = None
         self.drug_columns = None
@@ -23,9 +24,25 @@ class DrugCombinationAnalyzer:
         self.organ_outcome_columns = ['kidney_abnormal', 'liver_abnormal', 'organ_abnormal']
         self.combination_stats = {}
         self.association_rules = {}
+        self.model_data = None  # 存储预计算模型数据
         
-        if data_path:
+        # 优先使用模型文件
+        if model_path:
+            self.load_model(model_path)
+        elif data_path:
             self.load_data(data_path)
+    
+    def load_model(self, model_path):
+        """从预计算模型文件加载（替代原始数据）"""
+        import joblib
+        print(f"正在加载模型文件: {model_path}")
+        self.model_data = joblib.load(model_path)
+        self.drug_columns = self.model_data.get('drug_columns', [])
+        self.outcome_columns = self.model_data.get('outcome_columns', ['death', 'ventilator', 'sepsis'])
+        self.combination_stats = self.model_data.get('combination_stats', {})
+        self.data = None  # 不使用原始数据
+        print(f"模型加载成功：{len(self.drug_columns)} 种药物，{len(self.combination_stats)} 个预计算组合")
+        return self.model_data
     
     def load_data(self, data_path, load_full_data=True):
         """
@@ -100,9 +117,33 @@ class DrugCombinationAnalyzer:
                 'combinations': list(combinations(used_drugs, 2))
             }
         
-        # 分析整个数据集
+        # 如果使用模型，从预计算数据中获取
+        if self.model_data is not None:
+            total_patients = self.model_data.get('total_patients', 0)
+            min_count = int(total_patients * min_support)
+            
+            # 从预计算模型中过滤
+            result = []
+            for (drug1, drug2), stats in self.combination_stats.items():
+                if stats['count'] >= min_count:
+                    result.append({
+                        'drug1': drug1,
+                        'drug2': drug2,
+                        'count': stats['count'],
+                        'support': stats['support'],
+                        'frequency': f"{stats['support']*100:.2f}%"
+                    })
+            
+            # 按频率排序
+            result.sort(key=lambda x: x['count'], reverse=True)
+            result = result[:max_combinations]
+            
+            print(f"从模型加载 {len(result)} 个常见药物组合（支持度 >= {min_support*100:.1f}%）")
+            return result
+        
+        # 如果使用原始数据
         if self.data is None:
-            raise ValueError("请先加载数据")
+            raise ValueError("请先加载数据或模型")
         
         print("正在分析药物组合...")
         combination_counts = Counter()
@@ -147,9 +188,44 @@ class DrugCombinationAnalyzer:
     def analyze_combination_outcomes(self, drug1, drug2, outcome='death'):
         """
         分析特定药物组合与结局的关联
+        优先使用预计算模型，如果模型不存在则使用原始数据
         """
+        # 如果使用模型，从预计算数据中获取
+        if self.model_data is not None:
+            combo_key = tuple(sorted([drug1, drug2]))
+            if combo_key in self.combination_stats:
+                stats = self.combination_stats[combo_key]
+                if outcome in stats.get('outcomes', {}):
+                    outcome_stat = stats['outcomes'][outcome]
+                    return {
+                        'drug1': drug1,
+                        'drug2': drug2,
+                        'outcome': outcome,
+                        'combo_outcome_rate': outcome_stat['combo_rate'],
+                        'combo_outcome_count': outcome_stat['combo_count'],
+                        'combo_total_count': outcome_stat['combo_total'],
+                        'control_outcome_rate': outcome_stat['control_rate'],
+                        'control_outcome_count': outcome_stat['control_count'],
+                        'control_total_count': outcome_stat['control_total'],
+                        'relative_risk': outcome_stat['relative_risk'],
+                        'risk_difference': outcome_stat['combo_rate'] - outcome_stat['control_rate'],
+                        'ci_lower': None,  # 模型中没有存储置信区间
+                        'ci_upper': None,
+                        'interpretation': self._interpret_risk(outcome_stat['relative_risk'], 
+                                                             outcome_stat['combo_rate'] - outcome_stat['control_rate'])
+                    }
+                else:
+                    return {
+                        'error': f"结局变量 {outcome} 不在预计算模型中"
+                    }
+            else:
+                return {
+                    'error': f"未找到药物组合 {drug1} + {drug2} 的预计算数据（可能支持度太低）"
+                }
+        
+        # 如果使用原始数据
         if self.data is None:
-            raise ValueError("请先加载数据")
+            raise ValueError("请先加载数据或模型")
         
         # 支持所有结局类型（包括器官功能异常）
         all_outcomes = self.outcome_columns + self.organ_outcome_columns
