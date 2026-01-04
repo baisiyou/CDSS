@@ -747,49 +747,71 @@ def get_drug_recommendations():
                 })
         
         # Add some known protective drugs (based on clinical knowledge)
-        known_protective_drugs = {
-            'n-acetylcysteine': {
+        # Always include these, even if not in the data, as they are clinically known to be protective
+        known_protective_drugs = [
+            {
+                'drug': 'n-acetylcysteine',
                 'reason': 'N-acetylcysteine: Antioxidant, may protect liver and kidney function, reduce oxidative stress damage',
-                'category': 'Protective drug'
+                'category': 'Protective drug',
+                'risk_reduction': 0.15
             },
-            'vitamin_e': {
+            {
+                'drug': 'vitamin_e',
                 'reason': 'Vitamin E: Antioxidant, may reduce organ damage risk',
-                'category': 'Protective drug'
+                'category': 'Protective drug',
+                'risk_reduction': 0.12
             },
-            'magnesium': {
+            {
+                'drug': 'magnesium',
                 'reason': 'Magnesium: May protect kidney function, maintain electrolyte balance',
-                'category': 'Protective drug'
+                'category': 'Protective drug',
+                'risk_reduction': 0.10
             },
-            'vitamin': {
-                'reason': 'Vitamins: May support organ function, enhance body resistance',
-                'category': 'Protective drug'
+            {
+                'drug': 'ascorbic_acid',
+                'reason': 'Vitamin C (Ascorbic Acid): Antioxidant, may protect organ function',
+                'category': 'Protective drug',
+                'risk_reduction': 0.10
             },
-            'ascorbic': {
-                'reason': 'Vitamin C: Antioxidant, may protect organ function',
-                'category': 'Protective drug'
+            {
+                'drug': 'thiamine',
+                'reason': 'Vitamin B1 (Thiamine): May support organ metabolic function',
+                'category': 'Protective drug',
+                'risk_reduction': 0.08
             },
-            'thiamine': {
-                'reason': 'Vitamin B1: May support organ metabolic function',
-                'category': 'Protective drug'
-            },
-            'folic': {
-                'reason': 'Folic acid: May support organ function',
-                'category': 'Protective drug'
+            {
+                'drug': 'folic_acid',
+                'reason': 'Folic Acid: May support organ function',
+                'category': 'Protective drug',
+                'risk_reduction': 0.08
             }
-        }
+        ]
         
-        # Check if these drugs are in the data
-        for drug_name, info in known_protective_drugs.items():
-            matching_drugs = [d for d in combination_analyzer.drug_columns 
-                            if drug_name.lower() in d.lower()]
-            if matching_drugs and matching_drugs[0] not in current_drugs:
-                protective_drugs.append({
-                    'drug': matching_drugs[0],
-                    'reason': info['reason'],
-                    'category': info['category'],
-                    'risk_reduction': 0.1,  # Default value
-                    'potential_benefit': info['reason']
-                })
+        # Try to match with drugs in the data, but if not found, still include them
+        for known_drug in known_protective_drugs:
+            drug_name = known_drug['drug']
+            # Check if this drug is already in current drugs
+            if drug_name in current_drugs:
+                continue
+            
+            # Try to find matching drug in data
+            matching_drug = None
+            if combination_analyzer.drug_columns:
+                matching_drugs = [d for d in combination_analyzer.drug_columns 
+                                if drug_name.lower().replace('_', '-') in d.lower() or 
+                                   drug_name.lower().replace('_', ' ') in d.lower() or
+                                   drug_name.lower() in d.lower()]
+                if matching_drugs:
+                    matching_drug = matching_drugs[0]
+            
+            # Add the drug (use matched name if found, otherwise use known name)
+            protective_drugs.append({
+                'drug': matching_drug if matching_drug else drug_name,
+                'reason': known_drug['reason'],
+                'category': known_drug['category'],
+                'risk_reduction': known_drug['risk_reduction'],
+                'potential_benefit': known_drug['reason']
+            })
         
         # Remove duplicates and sort
         seen = set()
