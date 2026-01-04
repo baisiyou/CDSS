@@ -1372,20 +1372,20 @@
                     }
                     
                     [combinationResponse, predictResponse, recommendResponse, sideEffectsResponse] = await Promise.all([
-                        fetchWithTimeout(`${API_BASE}/drug_combinations`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(patientData)
+                    fetchWithTimeout(`${API_BASE}/drug_combinations`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(patientData)
                         }, 60000, 2), // Increased timeout to 60s and retries to 2 for sleeping services
-                        fetchWithTimeout(`${API_BASE}/predict`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(patientData)
+                    fetchWithTimeout(`${API_BASE}/predict`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(patientData)
                         }, 30000, 1), // Increased retries to 1
-                        fetchWithTimeout(`${API_BASE}/drugs/recommend`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ drugs: selectedDrugs })
+                    fetchWithTimeout(`${API_BASE}/drugs/recommend`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ drugs: selectedDrugs })
                         }, 30000, 1), // Increased retries to 1
                         fetchWithTimeout(`${API_BASE}/drugs/side-effects`, {
                             method: 'POST',
@@ -1494,8 +1494,8 @@
                                             errorData = { message: text || predictResponse.statusText };
                                         }
                                     }
-                                }
-                            } catch (e) {
+                        }
+                    } catch (e) {
                                 console.warn('Unable to parse prediction error response:', e);
                                 errorData = { message: predictResponse.statusText || 'Unknown error' };
                             }
@@ -1520,7 +1520,7 @@
                 if (recommendResponse) {
                     try {
                         if (recommendResponse.ok) {
-                            recommendData = await recommendResponse.json();
+                        recommendData = await recommendResponse.json();
                             console.log('Recommendation API response:', recommendData);
                         } else {
                             console.warn('Recommendation API returned error:', recommendResponse.status);
@@ -1601,9 +1601,9 @@
                     if (!errorMessage.includes('HTTP') && !errorMessage.includes('503') && 
                         !errorMessage.includes('Service Unavailable') && 
                         !errorMessage.includes('服务暂时不可用')) {
-                        const errorPrefix = currentLanguage === 'zh' ? '分析失败: ' : 
-                                          currentLanguage === 'fr' ? 'Échec de l\'analyse: ' : 
-                                          'Analysis failed: ';
+                const errorPrefix = currentLanguage === 'zh' ? '分析失败: ' : 
+                                  currentLanguage === 'fr' ? 'Échec de l\'analyse: ' : 
+                                  'Analysis failed: ';
                         errorMessage = errorPrefix + errorMessage;
                     }
                 }
@@ -1662,9 +1662,9 @@
             
             // Multi-organ dysfunction prediction tabs
             const organTypes = [
-                { id: 'kidney', name: t('kidneyAbnormal'), key: 'kidney_abnormal', desc: currentLanguage === 'zh' ? `${t('basedOn')} BUN ${t('predict')} ${t('kidneyAbnormal')} ${t('risk')}` : `Predict ${t('kidneyAbnormal')} ${t('risk')} based on BUN and other indicators` },
-                { id: 'liver', name: t('liverAbnormal'), key: 'liver_abnormal', desc: currentLanguage === 'zh' ? `${t('basedOn')} INR、${t('basedOn')} ${t('predict')} ${t('liverAbnormal')} ${t('risk')}` : `Predict ${t('liverAbnormal')} ${t('risk')} based on INR, albumin and other indicators` },
-                { id: 'organ', name: t('organAbnormal'), key: 'organ_abnormal', desc: currentLanguage === 'zh' ? `${t('basedOn')} ${t('predict')} ${t('kidneyAbnormal')} ${t('risk')}` : `Comprehensive prediction of kidney and liver dysfunction ${t('risk')}` }
+                { id: 'kidney', name: t('kidneyAbnormal'), key: 'kidney_abnormal', desc: currentLanguage === 'zh' ? `${t('basedOn')} BUN ${t('predict')} ${t('kidneyAbnormal')} ${t('risk')}` : currentLanguage === 'fr' ? `Prédire le ${t('risk')} de ${t('kidneyAbnormal')} basé sur BUN et autres indicateurs` : `Predict ${t('kidneyAbnormal')} ${t('risk')} based on BUN and other indicators` },
+                { id: 'liver', name: t('liverAbnormal'), key: 'liver_abnormal', desc: currentLanguage === 'zh' ? `${t('basedOn')} INR、${t('basedOn')} ${t('predict')} ${t('liverAbnormal')} ${t('risk')}` : currentLanguage === 'fr' ? `Prédire le ${t('risk')} de ${t('liverAbnormal')} basé sur INR, albumine et autres indicateurs` : `Predict ${t('liverAbnormal')} ${t('risk')} based on INR, albumin and other indicators` },
+                { id: 'organ', name: t('organAbnormal'), key: 'organ_abnormal', desc: currentLanguage === 'zh' ? `${t('basedOn')} ${t('predict')} ${t('kidneyAbnormal')} ${t('risk')}` : currentLanguage === 'fr' ? `Prédiction complète du ${t('risk')} de dysfonctionnement rénal et hépatique` : `Comprehensive prediction of kidney and liver dysfunction ${t('risk')}` }
             ];
             
             let tabsHtml = '';
@@ -1898,7 +1898,7 @@
             // Show recommendations if there's risk AND (we have recommendations OR we should show known protective drugs)
             const hasRecommendations = recommendations && recommendations.success && 
                                      recommendations.recommendations && 
-                                     recommendations.recommendations.length > 0;
+                                             recommendations.recommendations.length > 0;
             
             // Show recommendations for high/medium risk, or preventive recommendations for low risk
             const shouldShowRecommendations = ((hasHighRisk || hasCombinationRisk) && hasRecommendations) ||
@@ -1919,7 +1919,7 @@
                                     ${rec.best_combo_with ? `<span style="font-size: 12px; color: #666;">(${currentLanguage === 'zh' ? `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}` : currentLanguage === 'fr' ? `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}` : `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}`})</span>` : ''}
                                 </h4>
                                 <p style="color: #0c5460; margin: 5px 0;">
-                                    <strong>${t('recommendedReason')}:</strong> ${rec.reason || rec.potential_benefit || (currentLanguage === 'zh' ? '可能降低器官功能异常风险' : currentLanguage === 'fr' ? 'Peut réduire le risque de dysfonctionnement d\'organe' : 'May reduce organ dysfunction risk')}
+                                    <strong>${t('recommendedReason')}:</strong> ${rec.reason || rec.potential_benefit || t('mayReduceOrganRisk')}
                                 </p>
                                 ${rec.risk_reduction > 0 ? `
                                     <p style="color: #0c5460; font-size: 12px; margin-top: 5px;">
@@ -1951,9 +1951,7 @@
                 recommendationsHtml += `
                     <h4 style="margin-top: 20px; color: #155724;">💊 ${t('preventOrganDysfunction')}</h4>
                     <p style="color: #666; font-size: 12px; margin-bottom: 15px;">
-                        ${currentLanguage === 'zh' ? '当前风险较低，以下保护性药物可作为预防性使用，帮助维持器官功能健康' : 
-                          currentLanguage === 'fr' ? 'Le risque actuel est faible, les médicaments protecteurs suivants peuvent être utilisés de manière préventive pour aider à maintenir la santé des organes' :
-                          'Current risk is low, the following protective drugs can be used preventively to help maintain organ health'}:
+                        ${t('lowRiskPreventiveMessage')}:
                     </p>
                     <div style="display: grid; gap: 10px;">
                         ${recommendations.recommendations.map(rec => `
@@ -1963,7 +1961,7 @@
                                     ${rec.best_combo_with ? `<span style="font-size: 12px; color: #666;">(${currentLanguage === 'zh' ? `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}` : currentLanguage === 'fr' ? `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}` : `${t('comboWith')} ${rec.best_combo_with} ${t('comboWithSuffix')}`})</span>` : ''}
                                 </h4>
                                 <p style="color: #155724; margin: 5px 0;">
-                                    <strong>${t('recommendedReason')}:</strong> ${rec.reason || rec.potential_benefit || (currentLanguage === 'zh' ? '可能有助于维持器官功能健康' : currentLanguage === 'fr' ? 'Peut aider à maintenir la santé des organes' : 'May help maintain organ health')}
+                                    <strong>${t('recommendedReason')}:</strong> ${rec.reason || rec.potential_benefit || t('mayHelpMaintainOrganHealth')}
                                 </p>
                                 ${rec.risk_reduction > 0 ? `
                                     <p style="color: #155724; font-size: 12px; margin-top: 5px;">
