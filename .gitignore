@@ -31,8 +31,7 @@ api.log
 
 # 数据文件（通常太大，不应该提交到Git）
 *.csv
-# 例外：使用 Git LFS 跟踪的文件
-!eicu_mimic_lab_time.csv
+eicu_mimic_lab_time.csv
 
 # 环境变量
 .env
