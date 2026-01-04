@@ -690,10 +690,34 @@ def get_drug_recommendations():
             'error': str(e)
         }), 500
 
-if __name__ == '__main__':
-    try:
+# 在模块加载时初始化（gunicorn 启动时会执行）
+# 使用延迟初始化，避免在导入时立即加载（可能影响启动速度）
+_models_loaded = False
+
+def initialize_models():
+    """初始化模型和数据（用于 gunicorn 启动时调用）"""
+    global _models_loaded
+    if not _models_loaded:
         print("正在加载模型...")
         load_models()
+        _models_loaded = True
+
+# 使用 gunicorn 的 on_starting 钩子会在 worker 启动前执行
+# 但更好的方式是在模块级别调用（每个 worker 都需要加载数据）
+# 在应用启动时初始化（gunicorn 会在导入模块时执行这部分代码）
+try:
+    initialize_models()
+except Exception as e:
+    print(f"警告：初始化时加载模型失败: {e}")
+    import traceback
+    traceback.print_exc()
+    # 不退出，允许服务启动，但功能会受限
+
+if __name__ == '__main__':
+    try:
+        # 如果直接运行，确保模型已加载
+        if not _models_loaded:
+            initialize_models()
         
         # 验证路由是否注册
         print("\n验证路由注册...")
