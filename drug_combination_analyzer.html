@@ -1064,11 +1064,19 @@
                 }
                 
                 // Display different error messages based on error type
-                if (error.name === 'AbortError') {
-                    showError(t('errorApiTimeout'));
+                let errorMsg = '';
+                if (error.name === 'AbortError' || error.name === 'TypeError') {
+                    // Network error or timeout
+                    errorMsg = currentLanguage === 'zh' ? 
+                        '无法连接到API服务\n\n可能原因：\n1. Render免费版服务可能已休眠（不活动时会自动停止）\n2. 服务正在启动中（首次请求可能需要30-60秒）\n3. 网络连接问题\n\n解决方案：\n• 等待30-60秒后重试（服务会自动唤醒）\n• 访问 ' + API_BASE + '/health 检查服务状态\n• 如果持续失败，请检查Render Dashboard中的服务状态' :
+                        currentLanguage === 'fr' ?
+                        'Impossible de se connecter au service API\n\nCauses possibles :\n1. Le service Render gratuit peut être en veille (s\'arrête automatiquement en cas d\'inactivité)\n2. Le service est en cours de démarrage (la première requête peut prendre 30-60 secondes)\n3. Problème de connexion réseau\n\nSolutions :\n• Attendez 30-60 secondes et réessayez (le service se réveillera automatiquement)\n• Visitez ' + API_BASE + '/health pour vérifier l\'état du service\n• Si l\'échec persiste, vérifiez l\'état du service dans Render Dashboard' :
+                        'Unable to connect to API service\n\nPossible causes:\n1. Render free tier service may be sleeping (automatically stops when inactive)\n2. Service is starting up (first request may take 30-60 seconds)\n3. Network connection issue\n\nSolutions:\n• Wait 30-60 seconds and retry (service will auto-wake)\n• Visit ' + API_BASE + '/health to check service status\n• If failure persists, check service status in Render Dashboard';
                 } else {
-                    showError(t('errorApiConnection') + ' ' + error.message);
+                    errorMsg = t('errorApiConnection') + ' ' + error.message;
                 }
+                
+                showError(errorMsg);
             }
         }
         
