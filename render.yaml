@@ -2,11 +2,12 @@ services:
   - type: web
     name: cdss-api
     env: python
-    buildCommand: pip install -r requirements.txt && (python download_data.py || echo "数据文件下载失败，将使用Git LFS文件（如果存在）")
+    runtime: python-3.11.0
+    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt && (python download_data.py || echo "Data file download failed, will use Git LFS file if available")
     startCommand: gunicorn cdss_api:app -c gunicorn_config.py
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.18
+        value: 3.11.0
       # Backblaze B2 配置（在Render Dashboard中设置这些环境变量）
       # - key: B2_KEY_ID
       #   value: 005f3bca11c7bdf0000000001
