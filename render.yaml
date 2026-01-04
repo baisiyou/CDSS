@@ -2,7 +2,7 @@ services:
   - type: web
     name: cdss-api
     env: python
-    buildCommand: pip install -r requirements.txt && python download_data.py || echo "数据文件下载失败，部分功能将不可用"
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn cdss_api:app
     envVars:
       - key: PYTHON_VERSION
