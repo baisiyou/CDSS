@@ -486,10 +486,15 @@ def get_effective_combinations():
 def get_drugs_list():
     """获取所有可用药物列表"""
     try:
+        # 如果数据未加载，返回空列表（而不是500错误）
         if combination_analyzer is None or combination_analyzer.drug_columns is None:
             return jsonify({
-                'error': '药物组合分析系统未初始化'
-            }), 500
+                'success': True,
+                'drugs': [],
+                'total': 0,
+                'filtered': 0,
+                'warning': '药物组合分析系统未初始化，数据文件可能未加载'
+            })
         
         search = request.args.get('search', '').lower()
         limit = int(request.args.get('limit', 1000))
@@ -511,9 +516,14 @@ def get_drugs_list():
         })
     
     except Exception as e:
+        # 即使出错也返回200，但包含错误信息
         return jsonify({
+            'success': False,
+            'drugs': [],
+            'total': 0,
+            'filtered': 0,
             'error': str(e)
-        }), 500
+        })
 
 @app.route('/drugs/protective-effects', methods=['GET', 'POST'])
 def get_drug_protective_effects():
@@ -710,16 +720,17 @@ if __name__ == '__main__':
         print("  GET/POST /drugs/protective-effects - 分析药物保护性效果")
         print("=" * 60)
         
-        # 禁用reloader以避免路由注册问题
-        # 使用5003端口避免与系统服务冲突
-        PORT = 5003
-        print(f"\n服务器运行在 http://127.0.0.1:{PORT}")
+        # 获取端口号，优先使用环境变量（Render会设置PORT环境变量）
+        PORT = int(os.environ.get('PORT', 5003))
+        HOST = os.environ.get('HOST', '0.0.0.0')  # Render需要监听0.0.0.0
+        
+        print(f"\n服务器运行在 http://{HOST}:{PORT}")
         print(f"访问 http://localhost:{PORT} 查看API文档")
         print("打开 drug_combination_analyzer.html 使用药物组合分析界面")
         print("\n按 Ctrl+C 停止服务器")
         print("=" * 60)
         
-        app.run(host='127.0.0.1', port=PORT, debug=False, use_reloader=False, threaded=True)
+        app.run(host=HOST, port=PORT, debug=False, use_reloader=False, threaded=True)
     except Exception as e:
         print(f"\n❌ 启动失败: {e}")
         import traceback
