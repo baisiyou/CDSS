@@ -13,6 +13,7 @@ import sys
 from prediction_models import OrganFunctionPredictor
 from drug_interaction_warning import DrugInteractionWarning
 from drug_combination_analyzer import DrugCombinationAnalyzer
+from drug_side_effects import DrugSideEffects
 
 app = Flask(__name__)
 CORS(app)  # Enable cross-origin requests
@@ -22,10 +23,11 @@ predictor = None
 preprocessor = None
 warning_system = None
 combination_analyzer = None
+side_effects_db = None
 
 def load_models():
     """Load models and preprocessor"""
-    global predictor, preprocessor, warning_system, combination_analyzer
+    global predictor, preprocessor, warning_system, combination_analyzer, side_effects_db
     
     try:
         model_dir = 'models'
@@ -57,6 +59,10 @@ def load_models():
         
         warning_system = DrugInteractionWarning()
         print("Drug interaction warning system initialized successfully")
+        
+        # Initialize side effects database
+        side_effects_db = DrugSideEffects()
+        print("Drug side effects database initialized successfully")
         
         # Initialize drug combination analyzer
         # Prefer model file (lightweight), fallback to original data file if not available
@@ -886,6 +892,7 @@ if __name__ == '__main__':
         print("  GET  /drug_combinations/effective - Get effective drug combinations")
         print("  GET  /drugs/list             - Get drug list")
         print("  POST /drugs/recommend        - Get drug recommendations")
+        print("  GET/POST /drugs/side-effects - Get drug side effects and toxicity information")
         print("  GET/POST /drugs/protective-effects - Analyze drug protective effects")
         print("=" * 60)
         

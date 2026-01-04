@@ -1299,12 +1299,12 @@
                 patientData.bands = 0;
                 patientData.hct = 0;
                 
-                // Call drug combination analysis, organ function prediction, and drug recommendation simultaneously
+                // Call drug combination analysis, organ function prediction, drug recommendation, and side effects simultaneously
                 // Use fetch with timeout, but only retry main request
-                let combinationResponse, predictResponse, recommendResponse;
+                let combinationResponse, predictResponse, recommendResponse, sideEffectsResponse;
                 
                 try {
-                    [combinationResponse, predictResponse, recommendResponse] = await Promise.all([
+                    [combinationResponse, predictResponse, recommendResponse, sideEffectsResponse] = await Promise.all([
                         fetchWithTimeout(`${API_BASE}/drug_combinations`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -1316,6 +1316,11 @@
                             body: JSON.stringify(patientData)
                         }, 30000, 0),
                         fetchWithTimeout(`${API_BASE}/drugs/recommend`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ drugs: selectedDrugs })
+                        }, 30000, 0),
+                        fetchWithTimeout(`${API_BASE}/drugs/side-effects`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ drugs: selectedDrugs })
@@ -1464,8 +1469,27 @@
                     recommendData = { success: false, recommendations: [] };
                 }
                 
+                let sideEffectsData = null;
+                if (sideEffectsResponse) {
+                    try {
+                        if (sideEffectsResponse.ok) {
+                            sideEffectsData = await sideEffectsResponse.json();
+                            console.log('Side effects API response:', sideEffectsData);
+                        } else {
+                            console.warn('Side effects API returned error:', sideEffectsResponse.status);
+                            sideEffectsData = { success: false };
+                        }
+                    } catch (e) {
+                        console.warn('Side effects API call failed:', e);
+                        sideEffectsData = { success: false };
+                    }
+                } else {
+                    console.warn('Side effects API request failed, sideEffectsResponse is null');
+                    sideEffectsData = { success: false };
+                }
+                
                 if (combinationData.success) {
-                    displayResults(combinationData.analysis, predictData, recommendData);
+                    displayResults(combinationData.analysis, predictData, recommendData, sideEffectsData);
                 } else {
                     const errorMsg = t('errorApiConnection');
                     throw new Error(combinationData.error || errorMsg);
