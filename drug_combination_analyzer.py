@@ -41,8 +41,7 @@ class DrugCombinationAnalyzer:
         else:
             # 只读取列名，不加载数据（节省内存）
             print(f"正在读取数据文件列名: {data_path}")
-            import pandas as pd
-            # 只读取第一行来获取列名
+            # 只读取第一行来获取列名（pd已在文件顶部导入）
             self.data = None  # 不加载完整数据
             df_columns = pd.read_csv(data_path, nrows=0)  # nrows=0 只读取列名
             self._identify_drug_columns_from_columns(df_columns.columns)
