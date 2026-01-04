@@ -856,6 +856,11 @@ def get_drug_recommendations():
 @app.route('/drugs/side-effects', methods=['GET', 'POST', 'OPTIONS'])
 def get_drug_side_effects():
     """Get drug side effects and toxicity information"""
+    # Handle OPTIONS preflight request
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        return response
+    
     try:
         if side_effects_db is None:
             return jsonify({
