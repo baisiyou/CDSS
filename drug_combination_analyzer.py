@@ -597,42 +597,78 @@ class DrugCombinationAnalyzer:
     
     def get_drug_recommendations(self, current_drugs, outcome='death', top_n=10):
         """
-        基于当前用药，推荐可能有益的额外药物
-        current_drugs: 当前使用的药物列表
+        Recommend potentially beneficial additional drugs based on current medication
+        current_drugs: List of currently used drugs
         """
-        if self.data is None:
-            raise ValueError("请先加载数据")
+        # Check if we have data or model_data
+        has_data = self.data is not None
+        has_model = hasattr(self, 'model_data') and self.model_data is not None
         
-        # 获取所有药物
+        if not has_data and not has_model:
+            raise ValueError("Please load data first")
+        
+        # Get all drugs
+        if self.drug_columns is None:
+            raise ValueError("Drug columns not available")
+        
         all_drugs = set(self.drug_columns)
         unused_drugs = all_drugs - set(current_drugs)
         
         recommendations = []
         
-        for drug in unused_drugs:
-            # 分析添加该药物后的效果
-            # 简化：分析该药物与当前药物的组合效果
-            best_risk_reduction = 0
-            best_combo = None
-            
-            for current_drug in current_drugs:
-                analysis = self.analyze_combination_outcomes(current_drug, drug, outcome)
-                if 'error' not in analysis:
-                    if analysis['relative_risk'] < 1.0:
-                        risk_reduction = 1 - analysis['relative_risk']
-                        if risk_reduction > best_risk_reduction:
-                            best_risk_reduction = risk_reduction
-                            best_combo = current_drug
-            
-            if best_risk_reduction > 0:
-                recommendations.append({
-                    'drug': drug,
-                    'best_combo_with': best_combo,
-                    'risk_reduction': best_risk_reduction,
-                    'potential_benefit': f"与{best_combo}联用可能降低{outcome}风险{best_risk_reduction*100:.1f}%"
-                })
+        # If we have model_data, use it for faster analysis
+        if has_model:
+            # Use model_data to find protective combinations
+            for drug in list(unused_drugs)[:50]:  # Limit to first 50 to avoid timeout
+                best_risk_reduction = 0
+                best_combo = None
+                
+                for current_drug in current_drugs:
+                    try:
+                        analysis = self.analyze_combination_outcomes(current_drug, drug, outcome)
+                        if 'error' not in analysis:
+                            if analysis['relative_risk'] < 1.0:
+                                risk_reduction = 1 - analysis['relative_risk']
+                                if risk_reduction > best_risk_reduction:
+                                    best_risk_reduction = risk_reduction
+                                    best_combo = current_drug
+                    except:
+                        continue
+                
+                if best_risk_reduction > 0:
+                    recommendations.append({
+                        'drug': drug,
+                        'best_combo_with': best_combo,
+                        'risk_reduction': best_risk_reduction,
+                        'potential_benefit': f"Combination with {best_combo} may reduce {outcome} risk by {best_risk_reduction*100:.1f}%"
+                    })
+        else:
+            # Use full data
+            for drug in unused_drugs:
+                best_risk_reduction = 0
+                best_combo = None
+                
+                for current_drug in current_drugs:
+                    try:
+                        analysis = self.analyze_combination_outcomes(current_drug, drug, outcome)
+                        if 'error' not in analysis:
+                            if analysis['relative_risk'] < 1.0:
+                                risk_reduction = 1 - analysis['relative_risk']
+                                if risk_reduction > best_risk_reduction:
+                                    best_risk_reduction = risk_reduction
+                                    best_combo = current_drug
+                    except:
+                        continue
+                
+                if best_risk_reduction > 0:
+                    recommendations.append({
+                        'drug': drug,
+                        'best_combo_with': best_combo,
+                        'risk_reduction': best_risk_reduction,
+                        'potential_benefit': f"Combination with {best_combo} may reduce {outcome} risk by {best_risk_reduction*100:.1f}%"
+                    })
         
-        # 按风险降低程度排序
+        # Sort by risk reduction
         recommendations.sort(key=lambda x: x['risk_reduction'], reverse=True)
         
         return recommendations[:top_n]
