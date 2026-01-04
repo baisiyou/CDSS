@@ -1680,12 +1680,21 @@
             // Or if drug combination analysis shows high risk
             const hasCombinationRisk = analysis.overall_risk === 'high' || analysis.overall_risk === 'medium';
             
+            // Check for low risk (for preventive recommendations)
+            const hasLowRisk = analysis.overall_risk === 'low' || 
+                              (predictions && predictions.predictions && 
+                               Object.values(predictions.predictions).every(p => 
+                                   p.prediction === 0 && (!p.probability || p.probability <= 0.2)
+                               ));
+            
             // Show recommendations if there's risk AND (we have recommendations OR we should show known protective drugs)
             const hasRecommendations = recommendations && recommendations.success && 
                                      recommendations.recommendations && 
                                      recommendations.recommendations.length > 0;
             
-            const shouldShowRecommendations = (hasHighRisk || hasCombinationRisk) && hasRecommendations;
+            // Show recommendations for high/medium risk, or preventive recommendations for low risk
+            const shouldShowRecommendations = ((hasHighRisk || hasCombinationRisk) && hasRecommendations) ||
+                                             (hasLowRisk && hasRecommendations);
             
             if (shouldShowRecommendations) {
                 recommendationsHtml += `
