@@ -1497,18 +1497,47 @@
             } catch (error) {
                 console.error('Analysis failed:', error);
                 
-                // If error message already contains complete information, display directly
-                // Otherwise add prefix
-                let errorMessage = error.message || String(error);
+                // Handle different types of errors
+                let errorMessage = '';
                 
-                // If error message doesn't contain keywords like "HTTP" or "503", add prefix
-                if (!errorMessage.includes('HTTP') && !errorMessage.includes('503') && 
-                    !errorMessage.includes('Service Unavailable') && 
-                    !errorMessage.includes('服务暂时不可用')) {
-                    const errorPrefix = currentLanguage === 'zh' ? '分析失败: ' : 
-                                      currentLanguage === 'fr' ? 'Échec de l\'analyse: ' : 
-                                      'Analysis failed: ';
-                    errorMessage = errorPrefix + errorMessage;
+                // Check if it's a network/fetch error
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMessage = currentLanguage === 'zh' ? 
+                        '网络连接失败：无法连接到API服务\n\n可能原因：\n1. API服务未启动或已停止\n2. 网络连接问题\n3. CORS跨域问题\n4. API地址配置错误' :
+                        currentLanguage === 'fr' ?
+                        'Échec de connexion réseau : Impossible de se connecter au service API\n\nCauses possibles :\n1. Le service API n\'est pas démarré ou s\'est arrêté\n2. Problème de connexion réseau\n3. Problème CORS\n4. Configuration incorrecte de l\'adresse API' :
+                        'Network connection failed: Unable to connect to API service\n\nPossible causes:\n1. API service is not running or has stopped\n2. Network connection issue\n3. CORS cross-origin issue\n4. Incorrect API address configuration';
+                    
+                    // Try to check API health
+                    fetch(`${API_BASE}/health`)
+                        .then(response => {
+                            if (response.ok) {
+                                console.log('Health check successful, API is running');
+                            } else {
+                                console.warn('Health check failed:', response.status);
+                            }
+                        })
+                        .catch(e => {
+                            console.error('Health check also failed:', e);
+                            errorMessage += currentLanguage === 'zh' ? 
+                                '\n\n⚠️ 健康检查也失败，API服务可能已停止。请检查：\n• Render Dashboard 中服务状态\n• 服务是否正在运行\n• 是否需要重新部署' :
+                                currentLanguage === 'fr' ?
+                                '\n\n⚠️ Le contrôle de santé a également échoué, le service API peut être arrêté. Veuillez vérifier :\n• L\'état du service dans Render Dashboard\n• Si le service est en cours d\'exécution\n• S\'il faut redéployer' :
+                                '\n\n⚠️ Health check also failed, API service may be stopped. Please check:\n• Service status in Render Dashboard\n• Whether the service is running\n• If redeployment is needed';
+                        });
+                } else {
+                    // Other errors
+                    errorMessage = error.message || String(error);
+                    
+                    // If error message doesn't contain keywords like "HTTP" or "503", add prefix
+                    if (!errorMessage.includes('HTTP') && !errorMessage.includes('503') && 
+                        !errorMessage.includes('Service Unavailable') && 
+                        !errorMessage.includes('服务暂时不可用')) {
+                        const errorPrefix = currentLanguage === 'zh' ? '分析失败: ' : 
+                                          currentLanguage === 'fr' ? 'Échec de l\'analyse: ' : 
+                                          'Analysis failed: ';
+                        errorMessage = errorPrefix + errorMessage;
+                    }
                 }
                 
                 // Add service status check suggestion
@@ -1519,6 +1548,13 @@
                     '\n\n💡 Tip: You can visit ' + API_BASE + '/health to check service status';
                 
                 errorMessage += checkHealthMsg;
+                
+                // Add API address info for debugging
+                errorMessage += currentLanguage === 'zh' ? 
+                    '\n\n当前API地址: ' + API_BASE :
+                    currentLanguage === 'fr' ?
+                    '\n\nAdresse API actuelle : ' + API_BASE :
+                    '\n\nCurrent API address: ' + API_BASE;
                 
                 showError(errorMessage);
             } finally {
