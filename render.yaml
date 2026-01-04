@@ -3,7 +3,7 @@ services:
     name: cdss-api
     env: python
     buildCommand: python -m ensurepip --upgrade && python -m pip install --upgrade pip setuptools wheel && python -m pip install --no-build-isolation -r requirements.txt
-    startCommand: gunicorn cdss_api:app -c gunicorn_config.py
+    startCommand: gunicorn cdss_api:app --bind 0.0.0.0:$PORT -c gunicorn_config.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.18

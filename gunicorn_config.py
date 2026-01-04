@@ -5,8 +5,15 @@ import os
 import multiprocessing
 
 # Server socket
-bind = f"0.0.0.0:{os.environ.get('PORT', '5003')}"
+# Render automatically sets PORT environment variable
+# Must bind to 0.0.0.0 to accept external connections
+port = int(os.environ.get('PORT', 5003))
+bind = f"0.0.0.0:{port}"
 backlog = 2048
+
+# Ensure we're listening on the correct port
+print(f"Gunicorn binding to: {bind}")
+print(f"PORT environment variable: {os.environ.get('PORT', 'NOT SET')}")
 
 # Worker processes
 workers = 1  # Render免费版建议使用1个worker
