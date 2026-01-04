@@ -21,23 +21,23 @@ build/
 *~
 .DS_Store
 
-# 日志文件
+# Log files
 *.log
 api.log
 
-# 模型文件（如果很大，可以考虑不提交）
+# Model files (if too large, consider not committing)
 # models/
 # *.pkl
 
-# 数据文件（通常太大，不应该提交到Git）
+# Data files (usually too large, should not be committed to Git)
 *.csv
 eicu_mimic_lab_time.csv
 
-# 环境变量
+# Environment variables
 .env
 .env.local
 
-# 临时文件
+# Temporary files
 *.tmp
 *.temp
 
