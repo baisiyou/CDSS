@@ -1013,14 +1013,18 @@
                 }
             }
             
-            // 模糊匹配：检查查询是否包含中文名称的一部分
-            for (const [chinese, englishNames] of Object.entries(drugNameMap)) {
-                // 检查查询是否包含中文名称的任意字符
-                const chineseChars = chinese.split('');
-                const queryChars = lowerQuery.split('');
-                // 如果查询中的字符在中文名称中出现，可能是匹配的
-                if (queryChars.some(qc => chineseChars.includes(qc)) && query.length >= 2) {
-                    return englishNames;
+            // 模糊匹配：检查查询是否包含中文名称的一部分（仅当查询长度>=2时，避免单个字符匹配太多结果）
+            if (query.length >= 2) {
+                for (const [chinese, englishNames] of Object.entries(drugNameMap)) {
+                    // 检查查询是否包含中文名称的任意字符
+                    const chineseChars = chinese.split('');
+                    const queryChars = lowerQuery.split('');
+                    // 如果查询中的字符在中文名称中出现，可能是匹配的
+                    // 但要求至少匹配2个字符，或者查询是中文名称的开头部分
+                    const matchedChars = queryChars.filter(qc => chineseChars.includes(qc)).length;
+                    if (matchedChars >= 2 || chinese.startsWith(lowerQuery) || lowerQuery.startsWith(chinese.substring(0, Math.min(query.length, chinese.length)))) {
+                        return englishNames;
+                    }
                 }
             }
             
@@ -1058,6 +1062,20 @@
                 // 1. 先检查是否是中文药物名称
                 const translated = translateChineseToEnglish(query);
                 if (translated) {
+                    // 如果药物列表为空，显示友好提示
+                    if (allDrugs.length === 0) {
+                        dropdown.innerHTML = `
+                            <div class="drug-option" style="color: #ff9800; cursor: default;">
+                                ⚠️ ${t('errorApiConnection')}
+                            </div>
+                            <div class="drug-option" style="color: #666; cursor: default; font-size: 12px;">
+                                ${t('drugSearchHint')}
+                            </div>
+                        `;
+                        dropdown.classList.add('show');
+                        return;
+                    }
+                    
                     // 查找匹配的英文药物（支持部分匹配）
                     filtered = allDrugs.filter(drug => {
                         const lowerDrug = drug.toLowerCase();
@@ -1086,12 +1104,16 @@
                         return;
                     } else {
                         // 找到了中文映射，但在药物列表中找不到对应的英文药物
+                        // 显示建议的英文名称，并提示可以直接输入英文名称搜索
                         dropdown.innerHTML = `
                             <div class="drug-option" style="color: #ff9800; cursor: default;">
-                                ⚠️ 找到中文名称 "${query}"，但未在药物列表中找到对应的英文药物
+                                ⚠️ ${t('foundChineseButNoEnglish')}
                             </div>
                             <div class="drug-option" style="color: #666; cursor: default; font-size: 12px;">
-                                建议：尝试输入英文名称，如：${translated.slice(0, 3).join(', ')}
+                                ${t('suggestTryEnglish')}: ${translated.slice(0, 3).join(', ')}
+                            </div>
+                            <div class="drug-option" style="color: #666; cursor: default; font-size: 11px; margin-top: 5px;">
+                                💡 ${currentLanguage === 'zh' ? '提示：您也可以直接输入英文名称进行搜索' : 'Tip: You can also type English names directly'}
                             </div>
                         `;
                         dropdown.classList.add('show');
