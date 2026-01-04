@@ -1527,7 +1527,7 @@
         }
         
         // Display results
-        function displayResults(analysis, predictions = null, recommendations = null) {
+        function displayResults(analysis, predictions = null, recommendations = null, sideEffects = null) {
             // Overall risk
             const overallRisk = analysis.overall_risk;
             const riskClass = overallRisk === 'high' ? 'risk-high' : 
@@ -1684,6 +1684,86 @@
             
             // Recommendations and recommended drugs
             let recommendationsHtml = '';
+            
+            // Display drug side effects information
+            if (sideEffects && sideEffects.success && sideEffects.drugs) {
+                recommendationsHtml += `
+                    <h4 style="margin-top: 20px; color: #856404;">⚠️ ${currentLanguage === 'zh' ? '药物毒副作用提示' : currentLanguage === 'fr' ? 'Avertissements sur les Effets Secondaires des Médicaments' : 'Drug Side Effects & Toxicity Warnings'}</h4>
+                    <div style="display: grid; gap: 15px; margin-bottom: 20px;">
+                `;
+                
+                for (const [drugName, drugInfo] of Object.entries(sideEffects.drugs)) {
+                    if (drugInfo.side_effects && drugInfo.side_effects.length > 0) {
+                        const toxicityLevels = drugInfo.organ_toxicity || {};
+                        const hasHighToxicity = Object.values(toxicityLevels).some(level => level === 'high');
+                        const bgColor = hasHighToxicity ? '#fee' : '#fff3cd';
+                        const borderColor = hasHighToxicity ? '#dc3545' : '#ffc107';
+                        
+                        recommendationsHtml += `
+                            <div class="combination-item" style="background: ${bgColor}; border-left: 4px solid ${borderColor};">
+                                <h4 style="color: ${hasHighToxicity ? '#c33' : '#856404'}; margin-bottom: 10px;">
+                                    💊 ${drugName}
+                                    ${hasHighToxicity ? '<span style="font-size: 12px; color: #c33; margin-left: 10px;">⚠️ High Toxicity Risk</span>' : ''}
+                                </h4>
+                                
+                                <div style="margin-bottom: 10px;">
+                                    <strong style="color: ${hasHighToxicity ? '#c33' : '#856404'};">${currentLanguage === 'zh' ? '主要毒副作用' : currentLanguage === 'fr' ? 'Effets Secondaires Principaux' : 'Main Side Effects'}:</strong>
+                                    <ul style="margin: 5px 0 0 20px; color: #666;">
+                                        ${drugInfo.side_effects.map(effect => `<li>${effect}</li>`).join('')}
+                                    </ul>
+                                </div>
+                                
+                                ${Object.keys(toxicityLevels).length > 0 ? `
+                                    <div style="margin-bottom: 10px;">
+                                        <strong style="color: ${hasHighToxicity ? '#c33' : '#856404'};">${currentLanguage === 'zh' ? '器官毒性' : currentLanguage === 'fr' ? 'Toxicité Organique' : 'Organ Toxicity'}:</strong>
+                                        <div style="margin-top: 5px;">
+                                            ${Object.entries(toxicityLevels).map(([organ, level]) => {
+                                                const levelColors = {
+                                                    'high': '#c33',
+                                                    'medium': '#ff9800',
+                                                    'low': '#4caf50'
+                                                };
+                                                const levelText = {
+                                                    'high': currentLanguage === 'zh' ? '高' : currentLanguage === 'fr' ? 'Élevé' : 'High',
+                                                    'medium': currentLanguage === 'zh' ? '中' : currentLanguage === 'fr' ? 'Moyen' : 'Medium',
+                                                    'low': currentLanguage === 'zh' ? '低' : currentLanguage === 'fr' ? 'Faible' : 'Low'
+                                                };
+                                                return `<span style="display: inline-block; margin: 2px 5px; padding: 2px 8px; background: ${levelColors[level] || '#999'}; color: white; border-radius: 3px; font-size: 11px;">${organ}: ${levelText[level] || level}</span>`;
+                                            }).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${drugInfo.monitoring && drugInfo.monitoring.length > 0 ? `
+                                    <div style="margin-bottom: 10px;">
+                                        <strong style="color: ${hasHighToxicity ? '#c33' : '#856404'};">${currentLanguage === 'zh' ? '监测建议' : currentLanguage === 'fr' ? 'Recommandations de Surveillance' : 'Monitoring Recommendations'}:</strong>
+                                        <ul style="margin: 5px 0 0 20px; color: #666; font-size: 12px;">
+                                            ${drugInfo.monitoring.map(item => `<li>${item}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                                
+                                ${drugInfo.contraindications && drugInfo.contraindications.length > 0 ? `
+                                    <div style="margin-bottom: 10px;">
+                                        <strong style="color: #c33;">${currentLanguage === 'zh' ? '禁忌症' : currentLanguage === 'fr' ? 'Contre-indications' : 'Contraindications'}:</strong>
+                                        <ul style="margin: 5px 0 0 20px; color: #c33; font-size: 12px;">
+                                            ${drugInfo.contraindications.map(item => `<li>${item}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                                
+                                ${drugInfo.precautions ? `
+                                    <div style="margin-top: 10px; padding: 8px; background: #f0f0f0; border-radius: 5px; font-size: 12px; color: #666;">
+                                        <strong>${currentLanguage === 'zh' ? '注意事项' : currentLanguage === 'fr' ? 'Précautions' : 'Precautions'}:</strong> ${drugInfo.precautions}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }
+                }
+                
+                recommendationsHtml += `</div>`;
+            }
             
             // Display clinical recommendations
             if (analysis.recommendations && analysis.recommendations.length > 0) {
