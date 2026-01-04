@@ -3,7 +3,7 @@ services:
     name: cdss-api
     env: python
     runtime: python-3.11.0
-    buildCommand: pip install --upgrade pip setuptools wheel && pip install --prefer-binary -r requirements.txt && (python download_data.py || echo "Data file download failed, will use Git LFS file if available")
+    buildCommand: pip install --upgrade pip setuptools wheel && pip install --prefer-binary numpy pandas scikit-learn flask flask-cors joblib gunicorn requests && pip install --prefer-binary b2sdk && (python download_data.py || echo "Data file download failed, will use Git LFS file if available")
     startCommand: gunicorn cdss_api:app -c gunicorn_config.py
     envVars:
       - key: PYTHON_VERSION
