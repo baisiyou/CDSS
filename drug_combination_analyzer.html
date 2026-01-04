@@ -1447,10 +1447,21 @@
                 let recommendData = null;
                 if (recommendResponse) {
                     try {
-                        recommendData = await recommendResponse.json();
+                        if (recommendResponse.ok) {
+                            recommendData = await recommendResponse.json();
+                            console.log('Recommendation API response:', recommendData);
+                        } else {
+                            console.warn('Recommendation API returned error:', recommendResponse.status);
+                            // Even if API fails, set empty structure so we can show fallback message
+                            recommendData = { success: false, recommendations: [] };
+                        }
                     } catch (e) {
                         console.warn('Recommendation API call failed:', e);
+                        recommendData = { success: false, recommendations: [] };
                     }
+                } else {
+                    console.warn('Recommendation API request failed, recommendResponse is null');
+                    recommendData = { success: false, recommendations: [] };
                 }
                 
                 if (combinationData.success) {
