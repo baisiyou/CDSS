@@ -1669,9 +1669,12 @@
             // Or if drug combination analysis shows high risk
             const hasCombinationRisk = analysis.overall_risk === 'high' || analysis.overall_risk === 'medium';
             
-            const shouldShowRecommendations = (hasHighRisk || hasCombinationRisk) && 
-                                             recommendations && recommendations.success && 
-                                             recommendations.recommendations.length > 0;
+            // Show recommendations if there's risk AND (we have recommendations OR we should show known protective drugs)
+            const hasRecommendations = recommendations && recommendations.success && 
+                                     recommendations.recommendations && 
+                                     recommendations.recommendations.length > 0;
+            
+            const shouldShowRecommendations = (hasHighRisk || hasCombinationRisk) && hasRecommendations;
             
             if (shouldShowRecommendations) {
                 recommendationsHtml += `
