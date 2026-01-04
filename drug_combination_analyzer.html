@@ -1568,30 +1568,31 @@
                 let errorMessage = '';
                 
                 // Check if it's a network/fetch error
-                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                if (error.name === 'TypeError' && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
                     errorMessage = currentLanguage === 'zh' ? 
-                        '网络连接失败：无法连接到API服务\n\n可能原因：\n1. API服务未启动或已停止\n2. 网络连接问题\n3. CORS跨域问题\n4. API地址配置错误' :
+                        '网络连接失败：无法连接到API服务\n\n可能原因：\n1. Render免费版服务可能已休眠（不活动时会自动停止）\n2. 服务正在启动中（首次请求可能需要30-60秒）\n3. 网络连接问题\n4. 请求超时（分析可能需要较长时间）\n\n解决方案：\n• 等待30-60秒后重试（服务会自动唤醒）\n• 访问 ' + API_BASE + '/health 检查服务状态\n• 如果持续失败，请检查Render Dashboard中的服务状态和日志' :
                         currentLanguage === 'fr' ?
-                        'Échec de connexion réseau : Impossible de se connecter au service API\n\nCauses possibles :\n1. Le service API n\'est pas démarré ou s\'est arrêté\n2. Problème de connexion réseau\n3. Problème CORS\n4. Configuration incorrecte de l\'adresse API' :
-                        'Network connection failed: Unable to connect to API service\n\nPossible causes:\n1. API service is not running or has stopped\n2. Network connection issue\n3. CORS cross-origin issue\n4. Incorrect API address configuration';
+                        'Échec de connexion réseau : Impossible de se connecter au service API\n\nCauses possibles :\n1. Le service Render gratuit peut être en veille (s\'arrête automatiquement en cas d\'inactivité)\n2. Le service est en cours de démarrage (la première requête peut prendre 30-60 secondes)\n3. Problème de connexion réseau\n4. Délai d\'attente de la requête (l\'analyse peut prendre du temps)\n\nSolutions :\n• Attendez 30-60 secondes et réessayez (le service se réveillera automatiquement)\n• Visitez ' + API_BASE + '/health pour vérifier l\'état du service\n• Si l\'échec persiste, vérifiez l\'état du service et les journaux dans Render Dashboard' :
+                        'Network connection failed: Unable to connect to API service\n\nPossible causes:\n1. Render free tier service may be sleeping (automatically stops when inactive)\n2. Service is starting up (first request may take 30-60 seconds)\n3. Network connection issue\n4. Request timeout (analysis may take longer)\n\nSolutions:\n• Wait 30-60 seconds and retry (service will auto-wake)\n• Visit ' + API_BASE + '/health to check service status\n• If failure persists, check service status and logs in Render Dashboard';
                     
-                    // Try to check API health
-                    fetch(`${API_BASE}/health`)
-                        .then(response => {
-                            if (response.ok) {
-                                console.log('Health check successful, API is running');
-                            } else {
-                                console.warn('Health check failed:', response.status);
-                            }
-                        })
-                        .catch(e => {
-                            console.error('Health check also failed:', e);
-                            errorMessage += currentLanguage === 'zh' ? 
-                                '\n\n⚠️ 健康检查也失败，API服务可能已停止。请检查：\n• Render Dashboard 中服务状态\n• 服务是否正在运行\n• 是否需要重新部署' :
-                                currentLanguage === 'fr' ?
-                                '\n\n⚠️ Le contrôle de santé a également échoué, le service API peut être arrêté. Veuillez vérifier :\n• L\'état du service dans Render Dashboard\n• Si le service est en cours d\'exécution\n• S\'il faut redéployer' :
-                                '\n\n⚠️ Health check also failed, API service may be stopped. Please check:\n• Service status in Render Dashboard\n• Whether the service is running\n• If redeployment is needed';
-                        });
+                    // Try to check API health asynchronously (don't wait for it)
+                    checkApiHealth().then(health => {
+                        if (health.available) {
+                            console.log('API health check successful after error, service is running');
+                            // Service is available, could show a notification here
+                        } else {
+                            console.warn('API health check failed after error');
+                        }
+                    }).catch(e => {
+                        console.error('Health check also failed:', e);
+                    });
+                } else if (error.name === 'AbortError') {
+                    // Timeout error
+                    errorMessage = currentLanguage === 'zh' ? 
+                        '请求超时：分析请求超过60秒未响应\n\n可能原因：\n1. 服务正在处理大量数据\n2. 服务正在启动中\n3. 网络延迟\n\n解决方案：\n• 等待30-60秒后重试\n• 检查服务状态：' + API_BASE + '/health' :
+                        currentLanguage === 'fr' ?
+                        'Délai d\'attente dépassé : La requête d\'analyse n\'a pas répondu dans les 60 secondes\n\nCauses possibles :\n1. Le service traite de grandes quantités de données\n2. Le service est en cours de démarrage\n3. Latence réseau\n\nSolutions :\n• Attendez 30-60 secondes et réessayez\n• Vérifiez l\'état du service : ' + API_BASE + '/health' :
+                        'Request timeout: Analysis request did not respond within 60 seconds\n\nPossible causes:\n1. Service is processing large amounts of data\n2. Service is starting up\n3. Network latency\n\nSolutions:\n• Wait 30-60 seconds and retry\n• Check service status: ' + API_BASE + '/health';
                 } else {
                     // Other errors
                     errorMessage = error.message || String(error);
