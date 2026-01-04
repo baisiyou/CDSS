@@ -1364,27 +1364,34 @@
                 let combinationResponse, predictResponse, recommendResponse, sideEffectsResponse;
                 
                 try {
+                    // First check API health before making analysis requests
+                    console.log('Checking API health before analysis...');
+                    const healthCheck = await checkApiHealth();
+                    if (!healthCheck.available) {
+                        console.warn('API health check failed, but continuing with analysis request...');
+                    }
+                    
                     [combinationResponse, predictResponse, recommendResponse, sideEffectsResponse] = await Promise.all([
                         fetchWithTimeout(`${API_BASE}/drug_combinations`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(patientData)
-                        }, 45000, 1),
+                        }, 60000, 2), // Increased timeout to 60s and retries to 2 for sleeping services
                         fetchWithTimeout(`${API_BASE}/predict`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(patientData)
-                        }, 30000, 0),
+                        }, 30000, 1), // Increased retries to 1
                         fetchWithTimeout(`${API_BASE}/drugs/recommend`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ drugs: selectedDrugs })
-                        }, 30000, 0),
+                        }, 30000, 1), // Increased retries to 1
                         fetchWithTimeout(`${API_BASE}/drugs/side-effects`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ drugs: selectedDrugs })
-                        }, 30000, 0)
+                        }, 30000, 1) // Increased retries to 1
                     ]);
                 } catch (e) {
                     // If network error or timeout, throw directly
