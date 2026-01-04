@@ -520,6 +520,15 @@
                 errorApiConnection: '无法连接到API服务，请确保API服务正在运行',
                 errorApiTimeout: 'API服务响应超时，免费版服务可能需要30秒启动，请稍后重试',
                 serviceStarting: '服务正在启动中，请稍候...（首次访问可能需要30秒）',
+                error503: '药物组合分析服务暂时不可用',
+                error503Cause: '可能原因',
+                error503Solution: '解决方案',
+                error503Cause1: '服务正在启动中（首次访问可能需要30-60秒）',
+                error503Cause2: '内存限制导致完整数据未加载（免费版限制）',
+                error503Cause3: '数据文件正在下载或加载中',
+                error503Solution1: '等待30-60秒后重试',
+                error503Solution2: '检查服务健康状态',
+                error503Solution3: '如果持续失败，可能需要升级到付费计划以加载完整数据',
                 errorNoDrugs: '未找到匹配的药物',
                 errorTryEnglish: '请尝试输入英文名称',
                 predictionResult: '预测结果',
@@ -601,6 +610,15 @@
                 errorApiConnection: 'Cannot connect to API service, please ensure the API service is running',
                 errorApiTimeout: 'API service timeout, free tier service may need 30 seconds to start, please retry later',
                 serviceStarting: 'Service is starting, please wait... (First access may take 30 seconds)',
+                error503: 'Drug combination analysis service temporarily unavailable',
+                error503Cause: 'Possible causes',
+                error503Solution: 'Solutions',
+                error503Cause1: 'Service is starting (first access may take 30-60 seconds)',
+                error503Cause2: 'Memory limit preventing full data load (free tier)',
+                error503Cause3: 'Data file is downloading or loading',
+                error503Solution1: 'Wait 30-60 seconds and retry',
+                error503Solution2: 'Check service health status',
+                error503Solution3: 'If failure persists, upgrade to paid plan may be needed',
                 errorNoDrugs: 'No matching drugs found',
                 errorTryEnglish: 'Please try entering English names',
                 predictionResult: 'Prediction Result',
@@ -682,6 +700,15 @@
                 errorApiConnection: 'Impossible de se connecter au service API, veuillez vous assurer que le service API est en cours d\'exécution',
                 errorApiTimeout: 'Délai d\'attente du service API dépassé, le service gratuit peut nécessiter 30 secondes pour démarrer, veuillez réessayer plus tard',
                 serviceStarting: 'Le service démarre, veuillez patienter... (Le premier accès peut prendre 30 secondes)',
+                error503: 'Service d\'analyse de combinaison de médicaments temporairement indisponible',
+                error503Cause: 'Causes possibles',
+                error503Solution: 'Solutions',
+                error503Cause1: 'Le service démarre (premier accès peut prendre 30-60 secondes)',
+                error503Cause2: 'Limite de mémoire empêchant le chargement complet des données (version gratuite)',
+                error503Cause3: 'Fichier de données en cours de téléchargement ou de chargement',
+                error503Solution1: 'Attendre 30-60 secondes puis réessayer',
+                error503Solution2: 'Vérifier l\'état du service',
+                error503Solution3: 'Si l\'échec persiste, une mise à niveau vers un plan payant peut être nécessaire',
                 errorNoDrugs: 'Aucun médicament correspondant trouvé',
                 errorTryEnglish: 'Veuillez essayer d\'entrer des noms anglais',
                 predictionResult: 'Résultat de la Prédiction',
@@ -920,10 +947,8 @@
                         
                         clearTimeout(timeoutId);
                         
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                        
+                        // 即使响应不成功，也返回响应对象，让调用者可以读取错误信息
+                        // 只有在网络错误或超时的情况下才抛出错误
                         return response;
                     } finally {
                         clearTimeout(timeoutId);
@@ -932,6 +957,7 @@
                     lastError = error;
                     
                     // 如果是超时或网络错误，且还有重试机会，则继续重试
+                    // HTTP 错误状态码（如 503, 500）不重试，直接返回
                     if (attempt < maxRetries && (error.name === 'AbortError' || error.name === 'TypeError')) {
                         console.warn(`请求失败 (尝试 ${attempt + 1}/${maxRetries + 1}):`, error.message);
                         continue;
@@ -1015,15 +1041,15 @@
             
             // 模糊匹配：检查查询是否包含中文名称的一部分（仅当查询长度>=2时，避免单个字符匹配太多结果）
             if (query.length >= 2) {
-                for (const [chinese, englishNames] of Object.entries(drugNameMap)) {
-                    // 检查查询是否包含中文名称的任意字符
-                    const chineseChars = chinese.split('');
-                    const queryChars = lowerQuery.split('');
-                    // 如果查询中的字符在中文名称中出现，可能是匹配的
+            for (const [chinese, englishNames] of Object.entries(drugNameMap)) {
+                // 检查查询是否包含中文名称的任意字符
+                const chineseChars = chinese.split('');
+                const queryChars = lowerQuery.split('');
+                // 如果查询中的字符在中文名称中出现，可能是匹配的
                     // 但要求至少匹配2个字符，或者查询是中文名称的开头部分
                     const matchedChars = queryChars.filter(qc => chineseChars.includes(qc)).length;
                     if (matchedChars >= 2 || chinese.startsWith(lowerQuery) || lowerQuery.startsWith(chinese.substring(0, Math.min(query.length, chinese.length)))) {
-                        return englishNames;
+                    return englishNames;
                     }
                 }
             }
@@ -1275,34 +1301,105 @@
                 
                 // 同时调用药物组合分析、器官功能预测和药物推荐
                 // 使用带超时的fetch，但只对主要请求重试
-                const [combinationResponse, predictResponse, recommendResponse] = await Promise.all([
-                    fetchWithTimeout(`${API_BASE}/drug_combinations`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(patientData)
-                    }, 45000, 1).catch(e => {
-                        console.error('药物组合分析请求失败:', e);
-                        throw e; // 主要请求失败则抛出错误
-                    }),
-                    fetchWithTimeout(`${API_BASE}/predict`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(patientData)
-                    }, 30000, 0).catch(e => {
-                        console.warn('预测请求失败:', e);
-                        return null; // 预测失败，继续显示组合分析
-                    }),
-                    fetchWithTimeout(`${API_BASE}/drugs/recommend`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ drugs: selectedDrugs })
-                    }, 30000, 0).catch(e => {
-                        console.warn('推荐请求失败:', e);
-                        return null; // 推荐失败，继续显示其他结果
-                    })
-                ]);
+                let combinationResponse, predictResponse, recommendResponse;
                 
-                const combinationData = await combinationResponse.json();
+                try {
+                    [combinationResponse, predictResponse, recommendResponse] = await Promise.all([
+                        fetchWithTimeout(`${API_BASE}/drug_combinations`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(patientData)
+                        }, 45000, 1),
+                        fetchWithTimeout(`${API_BASE}/predict`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(patientData)
+                        }, 30000, 0),
+                        fetchWithTimeout(`${API_BASE}/drugs/recommend`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ drugs: selectedDrugs })
+                        }, 30000, 0)
+                    ]);
+                } catch (e) {
+                    // 如果是网络错误或超时，直接抛出
+                    console.error('请求发送失败:', e);
+                    throw e;
+                }
+                
+                // 检查组合分析响应状态
+                let combinationData;
+                if (!combinationResponse || !combinationResponse.ok) {
+                    const status = combinationResponse ? combinationResponse.status : 0;
+                    let errorData = {};
+                    
+                    if (combinationResponse) {
+                        try {
+                            // 尝试解析错误响应
+                            const contentType = combinationResponse.headers.get('content-type');
+                            console.log('错误响应 Content-Type:', contentType);
+                            console.log('错误响应状态:', status, combinationResponse.statusText);
+                            
+                            if (contentType && contentType.includes('application/json')) {
+                                errorData = await combinationResponse.json().catch(() => ({}));
+                                console.log('解析到的JSON错误数据:', errorData);
+                            } else {
+                                const text = await combinationResponse.text().catch(() => '');
+                                console.log('解析到的文本错误数据:', text);
+                                if (text && text.trim()) {
+                                    try {
+                                        errorData = JSON.parse(text);
+                                        console.log('文本解析为JSON成功:', errorData);
+                                    } catch {
+                                        errorData = { message: text || combinationResponse.statusText || '未知错误' };
+                                        console.log('文本解析为JSON失败，使用文本作为消息');
+                                    }
+                                } else {
+                                    errorData = { message: combinationResponse.statusText || '未知错误' };
+                                    console.log('文本为空，使用状态文本');
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('无法解析错误响应:', e);
+                            // 如果解析失败，尝试直接读取文本
+                            try {
+                                const text = await combinationResponse.text();
+                                errorData = { message: text || combinationResponse.statusText || '未知错误' };
+                                console.log('备用解析方法得到的错误数据:', errorData);
+                            } catch {
+                                errorData = { message: combinationResponse.statusText || '未知错误' };
+                                console.log('所有解析方法都失败，使用状态文本');
+                            }
+                        }
+                    } else {
+                        errorData = { message: '无法连接到服务器' };
+                    }
+                    
+                    if (status === 503) {
+                        // 503 Service Unavailable - 数据未加载或服务不可用
+                        const errorMsg = errorData.message || errorData.error || t('error503');
+                        
+                        const solutionMsg = 
+                            t('error503Cause') + '：\n' +
+                            '1. ' + t('error503Cause1') + '\n' +
+                            '2. ' + t('error503Cause2') + '\n' +
+                            '3. ' + t('error503Cause3') + '\n\n' +
+                            t('error503Solution') + '：\n' +
+                            '• ' + t('error503Solution1') + '\n' +
+                            '• ' + t('error503Solution2') + ': ' + API_BASE + '/health\n' +
+                            '• ' + t('error503Solution3');
+                        
+                        throw new Error(errorMsg + '\n\n' + solutionMsg);
+                    } else {
+                        // 其他错误
+                        const errorText = errorData.error || errorData.message || 
+                                         errorData.detail || 
+                                         (status ? `HTTP ${status}: ${combinationResponse.statusText}` : '网络错误');
+                        throw new Error(errorText);
+                    }
+                }
+                
+                combinationData = await combinationResponse.json();
                 let predictData = null;
                 if (predictResponse) {
                     try {
@@ -1310,13 +1407,34 @@
                             predictData = await predictResponse.json();
                             console.log('预测API响应:', predictData);
                         } else {
-                            const errorData = await predictResponse.json().catch(() => ({}));
+                            // 解析错误响应
+                            let errorData = {};
+                            try {
+                                const contentType = predictResponse.headers.get('content-type');
+                                if (contentType && contentType.includes('application/json')) {
+                                    errorData = await predictResponse.json();
+                                } else {
+                                    const text = await predictResponse.text();
+                                    if (text) {
+                                        try {
+                                            errorData = JSON.parse(text);
+                                        } catch {
+                                            errorData = { message: text || predictResponse.statusText };
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('无法解析预测错误响应:', e);
+                                errorData = { message: predictResponse.statusText || '未知错误' };
+                            }
+                            
                             console.warn('预测API返回错误:', predictResponse.status, errorData);
                             // 即使预测失败，也继续显示其他结果
-                            const errorMsg = currentLanguage === 'zh' ? '预测服务不可用' : 
-                                           currentLanguage === 'fr' ? 'Service de prédiction indisponible' : 
-                                           'Prediction service unavailable';
-                            predictData = { error: errorData.error || errorMsg };
+                            const errorMsg = errorData.error || errorData.message || 
+                                           (currentLanguage === 'zh' ? '预测服务不可用' : 
+                                            currentLanguage === 'fr' ? 'Service de prédiction indisponible' : 
+                                            'Prediction service unavailable');
+                            predictData = { error: errorMsg };
                         }
                     } catch (e) {
                         console.warn('预测API调用失败:', e);
@@ -1351,10 +1469,32 @@
                     throw new Error(combinationData.error || errorMsg);
                 }
             } catch (error) {
-                const errorPrefix = currentLanguage === 'zh' ? '分析失败: ' : 
-                                  currentLanguage === 'fr' ? 'Échec de l\'analyse: ' : 
-                                  'Analysis failed: ';
-                showError(errorPrefix + error.message);
+                console.error('分析失败:', error);
+                
+                // 如果错误消息已经包含完整信息，直接显示
+                // 否则添加前缀
+                let errorMessage = error.message || String(error);
+                
+                // 如果错误消息不包含"HTTP"或"503"等关键词，添加前缀
+                if (!errorMessage.includes('HTTP') && !errorMessage.includes('503') && 
+                    !errorMessage.includes('Service Unavailable') && 
+                    !errorMessage.includes('服务暂时不可用')) {
+                    const errorPrefix = currentLanguage === 'zh' ? '分析失败: ' : 
+                                      currentLanguage === 'fr' ? 'Échec de l\'analyse: ' : 
+                                      'Analysis failed: ';
+                    errorMessage = errorPrefix + errorMessage;
+                }
+                
+                // 添加服务状态检查建议
+                const checkHealthMsg = currentLanguage === 'zh' ? 
+                    '\n\n💡 提示：您可以访问 ' + API_BASE + '/health 查看服务状态' :
+                    currentLanguage === 'fr' ?
+                    '\n\n💡 Astuce : Vous pouvez visiter ' + API_BASE + '/health pour vérifier l\'état du service' :
+                    '\n\n💡 Tip: You can visit ' + API_BASE + '/health to check service status';
+                
+                errorMessage += checkHealthMsg;
+                
+                showError(errorMessage);
             } finally {
                 document.getElementById('loading').classList.remove('show');
             }
@@ -1625,8 +1765,27 @@
         
         // 显示错误
         function showError(message) {
-            document.getElementById('error').textContent = message;
-            document.getElementById('error').style.display = 'block';
+            const errorDiv = document.getElementById('error');
+            // 支持多行错误信息（保留换行符）
+            errorDiv.innerHTML = message.split('\n').map(line => {
+                // 如果是空行，返回 <br>
+                if (!line.trim()) return '<br>';
+                // 如果是标题行（包含冒号），加粗显示
+                if (line.includes('：') || line.includes(':')) {
+                    const parts = line.split(/[：:]/);
+                    if (parts.length >= 2) {
+                        return `<strong>${parts[0]}:</strong>${parts.slice(1).join(':')}`;
+                    }
+                }
+                // 如果是列表项（以 • 或数字开头），添加适当的样式
+                if (line.trim().match(/^[•\d\.]/)) {
+                    return `<div style="margin: 4px 0; padding-left: 10px;">${line}</div>`;
+                }
+                return line;
+            }).join('<br>');
+            errorDiv.style.display = 'block';
+            // 滚动到错误信息
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         
         </script>

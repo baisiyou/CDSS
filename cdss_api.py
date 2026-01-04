@@ -169,10 +169,25 @@ def favicon():
 @app.route('/health', methods=['GET'])
 def health():
     """健康检查"""
+    # 检查组合分析器状态
+    combination_status = 'not_initialized'
+    if combination_analyzer is not None:
+        has_data = combination_analyzer.data is not None
+        has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
+        if has_data:
+            combination_status = 'full_data_loaded'
+        elif has_model:
+            combination_status = 'model_loaded'
+        else:
+            combination_status = 'columns_only'
+    
     return jsonify({
         'status': 'healthy',
         'model_loaded': predictor is not None,
-        'preprocessor_loaded': preprocessor is not None
+        'preprocessor_loaded': preprocessor is not None,
+        'combination_analyzer_status': combination_status,
+        'combination_analyzer_initialized': combination_analyzer is not None,
+        'drug_list_available': combination_analyzer is not None and combination_analyzer.drug_columns is not None
     })
 
 @app.route('/predict', methods=['POST'])
@@ -396,11 +411,15 @@ def analyze_drug_combinations():
                 'message': '数据文件未加载，分析功能不可用（免费版内存限制，仅支持药物列表功能）'
             }), 503  # 503 Service Unavailable 更合适
         
-        if combination_analyzer.data is None:
+        # 检查是否有可用的数据源（完整数据或预计算模型）
+        has_data = combination_analyzer.data is not None
+        has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
+        
+        if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '完整数据未加载',
-                'message': '由于内存限制，完整数据分析功能不可用。当前仅支持药物列表查询。如需完整功能，请升级到付费计划。'
+                'error': '数据未加载',
+                'message': '完整数据和预计算模型都未加载。由于内存限制，完整数据分析功能不可用。当前仅支持药物列表查询。如需完整功能，请升级到付费计划或确保预计算模型文件存在。'
             }), 503  # 503 Service Unavailable
         
         # 将输入转换为DataFrame
@@ -447,11 +466,15 @@ def get_common_combinations():
                 'message': '数据文件未加载，此功能不可用'
             }), 503
         
-        if combination_analyzer.data is None:
+        # 检查是否有可用的数据源
+        has_data = combination_analyzer.data is not None
+        has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
+        
+        if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '完整数据未加载',
-                'message': '由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+                'error': '数据未加载',
+                'message': '完整数据和预计算模型都未加载。由于内存限制，此功能不可用。当前仅支持药物列表查询。'
             }), 503
         
         min_support = float(request.args.get('min_support', 0.01))
@@ -483,11 +506,15 @@ def get_risky_combinations():
                 'message': '数据文件未加载，此功能不可用'
             }), 503
         
-        if combination_analyzer.data is None:
+        # 检查是否有可用的数据源
+        has_data = combination_analyzer.data is not None
+        has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
+        
+        if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '完整数据未加载',
-                'message': '由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+                'error': '数据未加载',
+                'message': '完整数据和预计算模型都未加载。由于内存限制，此功能不可用。当前仅支持药物列表查询。'
             }), 503
         
         outcome = request.args.get('outcome', 'death')
@@ -521,11 +548,15 @@ def get_effective_combinations():
                 'message': '数据文件未加载，此功能不可用'
             }), 503
         
-        if combination_analyzer.data is None:
+        # 检查是否有可用的数据源
+        has_data = combination_analyzer.data is not None
+        has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
+        
+        if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '完整数据未加载',
-                'message': '由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+                'error': '数据未加载',
+                'message': '完整数据和预计算模型都未加载。由于内存限制，此功能不可用。当前仅支持药物列表查询。'
             }), 503
         
         outcome = request.args.get('outcome', 'death')
@@ -602,11 +633,15 @@ def get_drug_protective_effects():
                 'message': '数据文件未加载，此功能不可用'
             }), 503
         
-        if combination_analyzer.data is None:
+        # 检查是否有可用的数据源
+        has_data = combination_analyzer.data is not None
+        has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
+        
+        if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '完整数据未加载',
-                'message': '由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+                'error': '数据未加载',
+                'message': '完整数据和预计算模型都未加载。由于内存限制，此功能不可用。当前仅支持药物列表查询。'
             }), 503
         
         # 支持GET和POST请求
@@ -654,11 +689,15 @@ def get_drug_recommendations():
                 'message': '数据文件未加载，此功能不可用'
             }), 503
         
-        if combination_analyzer.data is None:
+        # 检查是否有可用的数据源
+        has_data = combination_analyzer.data is not None
+        has_model = hasattr(combination_analyzer, 'model_data') and combination_analyzer.model_data is not None
+        
+        if not has_data and not has_model:
             return jsonify({
                 'success': False,
-                'error': '完整数据未加载',
-                'message': '由于内存限制，此功能不可用。当前仅支持药物列表查询。'
+                'error': '数据未加载',
+                'message': '完整数据和预计算模型都未加载。由于内存限制，此功能不可用。当前仅支持药物列表查询。'
             }), 503
         
         data = request.json
